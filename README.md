@@ -60,9 +60,27 @@ The reminder worker checks the configured day of month (`Reminder:DayOfMonth`, d
 
 ```powershell
 docker build -t efcom-report .
-docker run --rm -p 8080:8080 -v efcom-report-data:/data `
-  -e ConnectionStrings__DefaultConnection="Data Source=/data/efcom.db" `
+docker run --rm -p 8080:8080 -v efcom-report-data:/home `
   efcom-report
 ```
 
-For the pilot, use one container instance and persistent storage. Before accounting-critical use, move the EF Core provider from SQLite to PostgreSQL/Azure SQL and keep the same application model.
+The container includes the application and creates the SQLite database on first start. The database is stored in `/home`, not in the image layer.
+
+## One-resource Azure pilot
+
+The smallest Azure setup is one Linux App Service with the required App Service Plan. If you choose **Publish: Code**, Azure can deploy the source from GitHub using GitHub Actions and no container registry is needed. The Dockerfile remains available for local testing and for a later container deployment.
+
+If you choose **Publish: Container**, App Service needs a container registry. You can use GitHub Container Registry instead of creating an Azure Container Registry, but the registry is still required for the Docker image. In Deployment Center, select GitHub Actions and let Azure generate the build-and-deploy workflow from this repository's Dockerfile.
+
+Set these App Service application settings:
+
+```text
+WEBSITES_PORT=8080
+WEBSITES_ENABLE_APP_SERVICE_STORAGE=true
+ConnectionStrings__DefaultConnection=Data Source=/home/efcomreport.db
+App__PublicUrl=https://<your-app-name>.azurewebsites.net
+Authentication__EnableDevLogin=false
+Authentication__AdminEmails=alexeyp@efcom.co.il
+```
+
+Use one instance and do not enable autoscale. Turn on App Service backups and periodically verify that the application data can be restored. This SQLite arrangement is suitable for the pilot only; before accounting-critical use, move the EF Core provider to PostgreSQL/Azure SQL.
