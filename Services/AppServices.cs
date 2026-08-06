@@ -288,8 +288,10 @@ public sealed class ReminderService(AppDbContext db, EmailService email, IConfig
             return 0;
         }
         if (!email.IsConfigured) throw new InvalidOperationException("Email is not configured for reminders.");
+        var publicUrl = (configuration["App:PublicUrl"] ?? "http://localhost:5186").TrimEnd('/');
+        var link = $"{publicUrl}/?month={now.Month}&year={now.Year}";
         foreach (var employee in missing)
-            await email.SendAsync([employee.Email], "Monthly leave submission reminder", $"Hello {employee.Name}, please open the leave tracker and submit your absence information for {now:MMMM yyyy}, or confirm that there was no absence.");
+            await email.SendAsync([employee.Email], "Monthly leave submission reminder", $"Hello {employee.Name},\n\nPlease submit your absence information for {now:MMMM yyyy}, or confirm that there was no absence.\n\nOpen the leave tracker: {link}");
         db.ReminderRuns.Add(new ReminderRun { Year = now.Year, Month = now.Month });
         await db.SaveChangesAsync();
         logger.LogInformation("Sent {Count} monthly reminders", missing.Count);
