@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Data;
 using EfcomReport.Data;
 using EfcomReport.Models;
 using EfcomReport.Services;
@@ -17,6 +18,7 @@ builder.Services.AddScoped<SubmissionService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<ReminderService>();
+builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddHostedService<ReminderWorker>();
 builder.Services.AddRazorPages(options =>
 {
@@ -102,8 +104,35 @@ using (var scope = app.Services.CreateScope())
                     FOREIGN KEY ("EmployeeId") REFERENCES "Employees" ("Id") ON DELETE CASCADE
             );
             CREATE INDEX IF NOT EXISTS "IX_ReportRequests_EmployeeId_Year_Month"
-                ON "ReportRequests" ("EmployeeId", "Year", "Month");
+            ON "ReportRequests" ("EmployeeId", "Year", "Month");
             """);
+        EnsureSqliteColumn(db, "AttachmentOriginalName", "TEXT NULL");
+        EnsureSqliteColumn(db, "AttachmentStorageName", "TEXT NULL");
+        EnsureSqliteColumn(db, "AttachmentContentType", "TEXT NULL");
+        EnsureSqliteColumn(db, "AttachmentSize", "INTEGER NULL");
+    }
+}
+
+static void EnsureSqliteColumn(AppDbContext db, string column, string definition)
+{
+    var connection = db.Database.GetDbConnection();
+    var wasOpen = connection.State == ConnectionState.Open;
+    if (!wasOpen) db.Database.OpenConnection();
+    try
+    {
+        using var command = connection.CreateCommand();
+        command.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('AbsenceRequests') WHERE name = '{column}'";
+        var exists = Convert.ToInt32(command.ExecuteScalar()) > 0;
+        if (!exists)
+        {
+            using var alter = connection.CreateCommand();
+            alter.CommandText = $"ALTER TABLE \"AbsenceRequests\" ADD COLUMN \"{column}\" {definition}";
+            alter.ExecuteNonQuery();
+        }
+    }
+    finally
+    {
+        if (!wasOpen) db.Database.CloseConnection();
     }
 }
 

@@ -15,6 +15,8 @@ Small monolithic ASP.NET Core Razor Pages application for employee leave trackin
 - CSV download and optional SMTP report delivery.
 - Monthly reminder worker plus a manual local test button.
 - Admin can send a targeted monthly submission request to one employee by email.
+- Sick Leave requests can optionally include a PDF, JPG or PNG document up to 10 MB; only the employee and administrators can download it.
+- All authenticated users can view the read-only work calendar; only administrators can change calendar days.
 
 ## Local run
 
@@ -53,6 +55,8 @@ $env:Email__From = "leave-tracker@example.com"
 ```
 
 Set `App__PublicUrl` to the public app URL in Azure so targeted emails contain the correct link.
+
+Sick-leave documents are stored outside SQLite. On Linux/App Service the default path is `/home/efcomreport-uploads`, which is persistent when `WEBSITES_ENABLE_APP_SERVICE_STORAGE=true`. Set `FileStorage__RootPath` only if a different persistent path is required.
 
 The reminder worker checks the configured day of month (`Reminder:DayOfMonth`, default `1`). For Azure, a scheduled Azure job is preferable to relying on a background worker in a scaled-out web container.
 

@@ -8,12 +8,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EfcomReport.Pages.Requests;
 
-public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCalendarService calendar, SubmissionService submissions) : PageModel
+public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCalendarService calendar, SubmissionService submissions, AttachmentService attachments) : PageModel
 {
     [BindProperty] public int LeaveTypeId { get; set; }
     [BindProperty, DataType(DataType.Date)] public DateTime StartDate { get; set; } = DateTime.Today;
     [BindProperty, DataType(DataType.Date)] public DateTime EndDate { get; set; } = DateTime.Today;
     [BindProperty] public string? Notes { get; set; }
+    [BindProperty] public IFormFile? Attachment { get; set; }
     [BindProperty(SupportsGet = true)] public int? Month { get; set; }
     [BindProperty(SupportsGet = true)] public int? Year { get; set; }
     public List<LeaveType> LeaveTypes { get; private set; } = [];
@@ -33,11 +34,35 @@ public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCa
         if (user?.EmployeeId is not int employeeId) return Forbid();
         StartDate = StartDate.Date; EndDate = EndDate.Date;
         if (EndDate < StartDate) ModelState.AddModelError(nameof(EndDate), "End date must not be earlier than start date.");
-        if (!await db.LeaveTypes.AnyAsync(x => x.Id == LeaveTypeId && x.IsActive)) ModelState.AddModelError(nameof(LeaveTypeId), "Select an active leave type.");
+        var leaveType = await db.LeaveTypes.SingleOrDefaultAsync(x => x.Id == LeaveTypeId && x.IsActive);
+        if (leaveType is null) ModelState.AddModelError(nameof(LeaveTypeId), "Select an active leave type.");
+        var isSickLeave = string.Equals(leaveType?.Name, "Sick Leave", StringComparison.OrdinalIgnoreCase);
+        if (Attachment is not null && !isSickLeave) ModelState.AddModelError(nameof(Attachment), "A document can only be attached to Sick Leave.");
+        if (Attachment is not null && isSickLeave)
+        {
+            var attachmentError = attachments.Validate(Attachment);
+            if (attachmentError is not null) ModelState.AddModelError(nameof(Attachment), attachmentError);
+        }
         if (await db.AbsenceRequests.AnyAsync(x => x.EmployeeId == employeeId && !x.IsCancelled && x.StartDate <= EndDate && x.EndDate >= StartDate)) ModelState.AddModelError(string.Empty, "This period overlaps another active absence. Edit or cancel the existing request first.");
         if (!ModelState.IsValid) return Page();
-        db.AbsenceRequests.Add(new AbsenceRequest { EmployeeId = employeeId, LeaveTypeId = LeaveTypeId, StartDate = StartDate, EndDate = EndDate, Notes = Notes?.Trim(), CreatedByEmail = user.Email, CreatedAtUtc = DateTime.UtcNow, UpdatedAtUtc = DateTime.UtcNow });
-        await db.SaveChangesAsync();
+        StoredAttachment? storedAttachment = null;
+        try
+        {
+            if (Attachment is not null) storedAttachment = await attachments.SaveAsync(Attachment);
+            db.AbsenceRequests.Add(new AbsenceRequest
+            {
+                EmployeeId = employeeId, LeaveTypeId = LeaveTypeId, StartDate = StartDate, EndDate = EndDate,
+                Notes = Notes?.Trim(), CreatedByEmail = user.Email, CreatedAtUtc = DateTime.UtcNow, UpdatedAtUtc = DateTime.UtcNow,
+                AttachmentOriginalName = storedAttachment?.OriginalName, AttachmentStorageName = storedAttachment?.StorageName,
+                AttachmentContentType = storedAttachment?.ContentType, AttachmentSize = storedAttachment?.Size
+            });
+            await db.SaveChangesAsync();
+        }
+        catch
+        {
+            if (storedAttachment is not null) attachments.Delete(storedAttachment.StorageName);
+            throw;
+        }
         await submissions.MarkRangeAsync(employeeId, StartDate, EndDate);
         TempData["Message"] = $"Absence saved. Counted workdays: {await calendar.CountAsync(StartDate, EndDate)}.";
         return RedirectToPage("/Index", new { month = StartDate.Month, year = StartDate.Year });

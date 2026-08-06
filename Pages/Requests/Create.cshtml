@@ -2,9 +2,10 @@
 @model EfcomReport.Pages.Requests.CreateModel
 @{ ViewData["Title"] = "Add absence"; }
 <h1>Add absence</h1><p class="text-muted">Workdays are calculated from the administrator calendar.</p>
-<form method="post" class="form-card"><div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<form method="post" enctype="multipart/form-data" class="form-card"><div asp-validation-summary="ModelOnly" class="text-danger"></div>
 <div class="mb-3"><label asp-for="LeaveTypeId" class="form-label">Leave type</label><select asp-for="LeaveTypeId" class="form-select"><option value="">Select...</option>@foreach (var type in Model.LeaveTypes) { <option value="@type.Id">@type.Name</option> }</select></div>
 <div class="row"><div class="col-md-6 mb-3"><label asp-for="StartDate" class="form-label">Start date</label><input asp-for="StartDate" class="form-control" /></div><div class="col-md-6 mb-3"><label asp-for="EndDate" class="form-label">End date</label><input asp-for="EndDate" class="form-control" /></div></div>
+<div class="mb-3"><label asp-for="Attachment" class="form-label">Sick-leave document <span class="text-muted">(optional)</span></label><input asp-for="Attachment" class="form-control" accept=".pdf,.jpg,.jpeg,.png" /><div class="form-text">Only for Sick Leave. PDF, JPG or PNG, up to 10 MB.</div><span asp-validation-for="Attachment" class="text-danger small"></span></div>
 <div class="mb-3"><label asp-for="Notes" class="form-label">Notes</label><textarea asp-for="Notes" class="form-control" rows="3"></textarea></div>
 <button class="btn btn-primary" type="submit">Save</button> <a class="btn btn-link" asp-page="/Index">Cancel</a></form>
 @section Scripts { <partial name="_ValidationScriptsPartial" /> }

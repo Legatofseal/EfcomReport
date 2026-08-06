@@ -7,8 +7,8 @@
 </head>
 <body>
 <header><nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3"><div class="container">
-    <a class="navbar-brand" asp-page="/Index">EfcomReport</a>
-    <div class="navbar-collapse d-sm-inline-flex justify-content-between"><ul class="navbar-nav flex-grow-1"><li class="nav-item"><a class="nav-link" asp-page="/Index">My tracker</a></li>@if (User.IsInRole("Admin")) { <li class="nav-item"><a class="nav-link" asp-page="/Admin/Index">Administration</a></li> }</ul>
+    <a class="navbar-brand" asp-page="/Index"><img class="site-logo" src="~/images/efcom-logo.png" alt="EfcomReport" /></a>
+    <div class="navbar-collapse d-sm-inline-flex justify-content-between"><ul class="navbar-nav flex-grow-1"><li class="nav-item"><a class="nav-link" asp-page="/Index">My tracker</a></li>@if (User.Identity?.IsAuthenticated == true) { <li class="nav-item"><a class="nav-link" asp-page="/Calendar">Work calendar</a></li> }@if (User.IsInRole("Admin")) { <li class="nav-item"><a class="nav-link" asp-page="/Admin/Index">Administration</a></li> }</ul>
     <ul class="navbar-nav">@if (User.Identity?.IsAuthenticated == true) { <li class="nav-item"><span class="nav-link text-muted">@User.Identity.Name</span></li><li class="nav-item"><a class="nav-link" href="/account/logout">Sign out</a></li> } else { <li class="nav-item"><a class="nav-link" href="/account/login">Sign in</a></li> }</ul></div>
 </div></nav></header>
 <div class="container"><main role="main" class="pb-3">@if (TempData["Message"] is string message) { <div class="alert alert-success">@message</div> }@RenderBody()</main></div>

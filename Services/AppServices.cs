@@ -72,6 +72,74 @@ public sealed class WorkCalendarService(AppDbContext db)
 
 public sealed record CalendarDay(DateTime Date, bool IsWorking, bool IsOverride);
 
+public sealed record StoredAttachment(string OriginalName, string StorageName, string ContentType, long Size);
+
+public sealed class AttachmentService(IConfiguration configuration)
+{
+    public const long MaxFileSize = 10 * 1024 * 1024;
+
+    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ".pdf", ".jpg", ".jpeg", ".png"
+    };
+
+    public string RootPath
+    {
+        get
+        {
+            var configured = configuration["FileStorage:RootPath"];
+            if (!string.IsNullOrWhiteSpace(configured)) return configured;
+            return OperatingSystem.IsLinux()
+                ? "/home/efcomreport-uploads"
+                : Path.Combine(AppContext.BaseDirectory, "uploads");
+        }
+    }
+
+    public string? Validate(IFormFile? file)
+    {
+        if (file is null || file.Length == 0) return "Choose a non-empty document.";
+        if (file.Length > MaxFileSize) return "The document must be 10 MB or smaller.";
+        var extension = Path.GetExtension(file.FileName);
+        if (!AllowedExtensions.Contains(extension)) return "Allowed document types: PDF, JPG and PNG.";
+        return null;
+    }
+
+    public async Task<StoredAttachment> SaveAsync(IFormFile file, CancellationToken cancellationToken = default)
+    {
+        var validationError = Validate(file);
+        if (validationError is not null) throw new InvalidOperationException(validationError);
+        Directory.CreateDirectory(RootPath);
+        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+        var storageName = $"{Guid.NewGuid():N}{extension}";
+        var path = Path.Combine(RootPath, storageName);
+        await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        await file.CopyToAsync(stream, cancellationToken);
+        var contentType = extension switch
+        {
+            ".pdf" => "application/pdf",
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            _ => "application/octet-stream"
+        };
+        return new StoredAttachment(Path.GetFileName(file.FileName), storageName,
+            contentType, file.Length);
+    }
+
+    public string? GetPath(string? storageName)
+    {
+        if (string.IsNullOrWhiteSpace(storageName) || storageName != Path.GetFileName(storageName)) return null;
+        var path = Path.GetFullPath(Path.Combine(RootPath, storageName));
+        var root = Path.GetFullPath(RootPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        return path.StartsWith(root, StringComparison.OrdinalIgnoreCase) ? path : null;
+    }
+
+    public void Delete(string? storageName)
+    {
+        var path = GetPath(storageName);
+        if (path is not null && File.Exists(path)) File.Delete(path);
+    }
+}
+
 public sealed class SubmissionService(AppDbContext db)
 {
     public async Task MarkAsync(int employeeId, int year, int month, bool hasAbsence)

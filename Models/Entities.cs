@@ -38,6 +38,10 @@ public sealed class AbsenceRequest
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
     public string? Notes { get; set; }
+    public string? AttachmentOriginalName { get; set; }
+    public string? AttachmentStorageName { get; set; }
+    public string? AttachmentContentType { get; set; }
+    public long? AttachmentSize { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public string CreatedByEmail { get; set; } = "";

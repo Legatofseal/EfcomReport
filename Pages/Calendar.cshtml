@@ -1,0 +1,6 @@
+@page
+@model EfcomReport.Pages.CalendarModel
+@{ ViewData["Title"] = "Work calendar"; }
+<div class="d-flex justify-content-between align-items-center mb-3"><div><h1>Work calendar</h1><p class="text-muted mb-0">Read-only view of the administrator calendar.</p></div><form method="get" class="d-flex gap-2"><input class="form-control" type="number" name="month" min="1" max="12" value="@Model.CurrentMonth" /><input class="form-control" type="number" name="year" min="2020" max="2100" value="@Model.CurrentYear" /><button class="btn btn-outline-primary">Open</button></form></div>
+<div class="calendar-legend mb-3"><span class="calendar-legend-item working">Working day</span><span class="calendar-legend-item not-working">Day off</span><span class="text-muted">Manual administrator changes are marked with *.</span></div>
+<div class="calendar-grid calendar-grid-readonly">@foreach (var day in Model.Days) { <div class="calendar-day @(day.IsWorking ? "working" : "not-working")" title="@(day.IsOverride ? "Manual administrator override" : "Default calendar rule")"><strong>@day.Date.Day</strong><span>@(day.IsWorking ? "Working" : "Off")@(day.IsOverride ? " *" : "")</span></div> }</div>

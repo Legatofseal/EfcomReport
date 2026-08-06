@@ -8,13 +8,15 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EfcomReport.Pages.Requests;
 
-public class EditModel(AppDbContext db, CurrentUserService currentUser, SubmissionService submissions) : PageModel
+public class EditModel(AppDbContext db, CurrentUserService currentUser, SubmissionService submissions, AttachmentService attachments) : PageModel
 {
     [BindProperty(SupportsGet = true)] public int Id { get; set; }
     [BindProperty] public int LeaveTypeId { get; set; }
     [BindProperty, DataType(DataType.Date)] public DateTime StartDate { get; set; }
     [BindProperty, DataType(DataType.Date)] public DateTime EndDate { get; set; }
     [BindProperty] public string? Notes { get; set; }
+    [BindProperty] public IFormFile? Attachment { get; set; }
+    [BindProperty] public bool RemoveAttachment { get; set; }
     public List<LeaveType> LeaveTypes { get; private set; } = [];
     public AbsenceRequest? RequestItem { get; private set; }
 
@@ -29,11 +31,42 @@ public class EditModel(AppDbContext db, CurrentUserService currentUser, Submissi
         LeaveTypes = await db.LeaveTypes.Where(x => x.IsActive).OrderBy(x => x.Id).ToListAsync();
         StartDate = StartDate.Date; EndDate = EndDate.Date;
         if (EndDate < StartDate) ModelState.AddModelError(nameof(EndDate), "End date must not be earlier than start date.");
-        if (!await db.LeaveTypes.AnyAsync(x => x.Id == LeaveTypeId && x.IsActive)) ModelState.AddModelError(nameof(LeaveTypeId), "Select an active leave type.");
+        var leaveType = await db.LeaveTypes.SingleOrDefaultAsync(x => x.Id == LeaveTypeId && x.IsActive);
+        if (leaveType is null) ModelState.AddModelError(nameof(LeaveTypeId), "Select an active leave type.");
+        var isSickLeave = string.Equals(leaveType?.Name, "Sick Leave", StringComparison.OrdinalIgnoreCase);
+        if (Attachment is not null && !isSickLeave) ModelState.AddModelError(nameof(Attachment), "A document can only be attached to Sick Leave.");
+        if (Attachment is not null && isSickLeave)
+        {
+            var attachmentError = attachments.Validate(Attachment);
+            if (attachmentError is not null) ModelState.AddModelError(nameof(Attachment), attachmentError);
+        }
         if (await db.AbsenceRequests.AnyAsync(x => x.Id != Id && x.EmployeeId == RequestItem.EmployeeId && !x.IsCancelled && x.StartDate <= EndDate && x.EndDate >= StartDate)) ModelState.AddModelError(string.Empty, "This period overlaps another active absence.");
         if (!ModelState.IsValid) return Page();
-        RequestItem.LeaveTypeId = LeaveTypeId; RequestItem.StartDate = StartDate; RequestItem.EndDate = EndDate; RequestItem.Notes = Notes?.Trim(); RequestItem.UpdatedAtUtc = DateTime.UtcNow;
-        await db.SaveChangesAsync(); await submissions.MarkRangeAsync(RequestItem.EmployeeId, StartDate, EndDate);
+        var oldStorageName = RequestItem.AttachmentStorageName;
+        StoredAttachment? replacement = null;
+        try
+        {
+            if (Attachment is not null) replacement = await attachments.SaveAsync(Attachment);
+            RequestItem.LeaveTypeId = LeaveTypeId; RequestItem.StartDate = StartDate; RequestItem.EndDate = EndDate; RequestItem.Notes = Notes?.Trim(); RequestItem.UpdatedAtUtc = DateTime.UtcNow;
+            if (replacement is not null)
+            {
+                RequestItem.AttachmentOriginalName = replacement.OriginalName; RequestItem.AttachmentStorageName = replacement.StorageName;
+                RequestItem.AttachmentContentType = replacement.ContentType; RequestItem.AttachmentSize = replacement.Size;
+            }
+            else if (!isSickLeave || RemoveAttachment)
+            {
+                RequestItem.AttachmentOriginalName = null; RequestItem.AttachmentStorageName = null;
+                RequestItem.AttachmentContentType = null; RequestItem.AttachmentSize = null;
+            }
+            await db.SaveChangesAsync();
+            if (oldStorageName is not null && (replacement is not null || !isSickLeave || RemoveAttachment)) attachments.Delete(oldStorageName);
+        }
+        catch
+        {
+            if (replacement is not null) attachments.Delete(replacement.StorageName);
+            throw;
+        }
+        await submissions.MarkRangeAsync(RequestItem.EmployeeId, StartDate, EndDate);
         return RedirectToPage("/Index", new { month = StartDate.Month, year = StartDate.Year });
     }
 
