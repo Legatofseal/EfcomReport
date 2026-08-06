@@ -1,0 +1,11 @@
+@page
+@model EfcomReport.Pages.Admin.IndexModel
+@{ ViewData["Title"] = "Administration"; }
+<h1>Administration</h1>
+<div class="row g-3">
+    <div class="col-md-4"><a class="card link-card" asp-page="/Admin/Settings"><div class="card-body"><h2 class="h5">Employees and settings</h2><p>Manage employees, leave types and report recipients.</p></div></a></div>
+    <div class="col-md-4"><a class="card link-card" asp-page="/Admin/Calendar"><div class="card-body"><h2 class="h5">Work calendar</h2><p>Mark individual dates as working or non-working.</p></div></a></div>
+    <div class="col-md-4"><a class="card link-card" asp-page="/Admin/Reports"><div class="card-body"><h2 class="h5">Reports</h2><p>Review missing submissions and email a report.</p></div></a></div>
+    <div class="col-md-4"><a class="card link-card" asp-page="/Admin/Requests"><div class="card-body"><h2 class="h5">All requests</h2><p>Review and correct employee absence requests.</p></div></a></div>
+    <div class="col-md-4"><a class="card link-card" asp-page="/Admin/Reminders"><div class="card-body"><h2 class="h5">Reminders</h2><p>Test monthly reminders for employees who have not submitted.</p></div></a></div>
+</div>

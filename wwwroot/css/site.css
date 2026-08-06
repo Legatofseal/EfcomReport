@@ -1,0 +1,13 @@
+html { font-size: 14px; position: relative; min-height: 100%; }
+@media (min-width: 768px) { html { font-size: 16px; } }
+body { margin-bottom: 60px; background: #f8fafc; }
+.card { border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15,23,42,.04); }
+.form-card { max-width: 720px; background: white; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: .5rem; }
+.link-card { color: inherit; text-decoration: none; min-height: 140px; }
+.link-card:hover { border-color: #0d6efd; }
+.calendar-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr)); gap: .5rem; }
+.calendar-grid form { margin: 0; }
+.calendar-day { border: 1px solid #cbd5e1; border-radius: .5rem; width: 100%; min-height: 76px; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.calendar-day.working { background: #dcfce7; color: #166534; }
+.calendar-day.not-working { background: #fee2e2; color: #991b1b; }
+.calendar-day:hover { outline: 3px solid rgba(13,110,253,.25); }

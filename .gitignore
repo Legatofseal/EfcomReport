@@ -1,0 +1,8 @@
+bin/
+obj/
+*.db
+*.db-shm
+*.db-wal
+local-run*.log
+test-cookies.txt
+fixture-report.csv

@@ -1,0 +1,11 @@
+@page
+@model EfcomReport.Pages.Admin.ReportsModel
+@{ ViewData["Title"] = "Reports"; }
+<div class="d-flex justify-content-between align-items-center mb-3"><h1>Reports</h1><form method="get" class="d-flex gap-2"><input class="form-control" type="number" name="month" min="1" max="12" value="@Model.CurrentMonth" /><input class="form-control" type="number" name="year" min="2020" max="2100" value="@Model.CurrentYear" /><button class="btn btn-outline-primary">Open</button></form></div>
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+@if (Model.Report is not null)
+{
+<p><a class="btn btn-outline-secondary" asp-page-handler="Csv" asp-route-year="@Model.CurrentYear" asp-route-month="@Model.CurrentMonth">Download CSV</a></p>
+<form method="post" asp-page-handler="Send" class="card mb-3"><div class="card-body"><h2 class="h5">Send report</h2><input type="hidden" name="year" value="@Model.CurrentYear" /><input type="hidden" name="month" value="@Model.CurrentMonth" /><div class="mb-2">@foreach (var recipient in Model.Recipients) { <label class="d-block"><input type="checkbox" name="SelectedRecipientIds" value="@recipient.Id" /> @recipient.Email</label> }</div><button class="btn btn-primary">Send selected recipients</button></div></form>
+<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>Employee</th>@foreach (var type in Model.Report.Types) { <th>@type.Name days</th><th>@type.Name entries</th> }<th>Total</th><th>Monthly submission</th></tr></thead><tbody>@foreach (var row in Model.Report.Rows) { <tr class="@(row.SubmissionState == "Missing" ? "table-warning" : "")"><td>@row.EmployeeName</td>@foreach (var type in Model.Report.Types) { <td>@row.DaysByType.GetValueOrDefault(type.Name)</td><td>@row.EntryCounts.GetValueOrDefault(type.Name)</td> }<td>@row.TotalDays</td><td>@row.SubmissionState</td></tr> }</tbody></table></div>
+}

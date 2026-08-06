@@ -1,0 +1,11 @@
+@page "{id:int}"
+@model EfcomReport.Pages.Requests.EditModel
+@{ ViewData["Title"] = "Edit absence"; }
+<h1>Edit absence</h1>
+<form method="post" class="form-card mb-3"><div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<div class="mb-3"><label asp-for="LeaveTypeId" class="form-label">Leave type</label><select asp-for="LeaveTypeId" class="form-select">@foreach (var type in Model.LeaveTypes) { <option value="@type.Id">@type.Name</option> }</select></div>
+<div class="row"><div class="col-md-6 mb-3"><label asp-for="StartDate" class="form-label">Start date</label><input asp-for="StartDate" class="form-control" /></div><div class="col-md-6 mb-3"><label asp-for="EndDate" class="form-label">End date</label><input asp-for="EndDate" class="form-control" /></div></div>
+<div class="mb-3"><label asp-for="Notes" class="form-label">Notes</label><textarea asp-for="Notes" class="form-control" rows="3"></textarea></div>
+<button class="btn btn-primary" type="submit">Save changes</button> <a class="btn btn-link" asp-page="/Index">Cancel</a></form>
+<form method="post" asp-page-handler="Cancel" onsubmit="return confirm('Cancel this absence?');"><input type="hidden" asp-for="Id" /><button class="btn btn-outline-danger" type="submit">Cancel absence</button></form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

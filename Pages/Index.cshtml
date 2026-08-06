@@ -1,0 +1,39 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "My leave tracker";
+}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div><h1>My leave tracker</h1><p class="text-muted mb-0">@Model.CurrentMonth.ToString("00")/@Model.CurrentYear</p></div>
+    <form method="get" class="d-flex gap-2 align-items-end">
+        <label>Month <input class="form-control" type="number" name="month" min="1" max="12" value="@Model.CurrentMonth" /></label>
+        <label>Year <input class="form-control" type="number" name="year" min="2020" max="2100" value="@Model.CurrentYear" /></label>
+        <button class="btn btn-outline-primary" type="submit">Open</button>
+    </form>
+</div>
+
+@if (Model.UserRecord?.Employee is null)
+{
+    <div class="alert alert-warning">Your Google account is not linked to an employee yet. Ask an administrator to add your email.</div>
+}
+else
+{
+    <div class="card mb-4"><div class="card-body d-flex justify-content-between align-items-center">
+        <div><strong>Monthly submission:</strong> <span class="badge @(Model.SubmissionState == "Missing" ? "text-bg-warning" : "text-bg-success")">@Model.SubmissionState</span></div>
+        <div class="d-flex gap-2">
+            <form method="post" asp-page-handler="NoAbsence"><input type="hidden" name="year" value="@Model.CurrentYear" /><input type="hidden" name="month" value="@Model.CurrentMonth" /><button class="btn btn-outline-secondary" type="submit">No absence this month</button></form>
+            <a class="btn btn-primary" asp-page="/Requests/Create" asp-route-year="@Model.CurrentYear" asp-route-month="@Model.CurrentMonth">Add absence</a>
+        </div>
+    </div></div>
+
+    <h2 class="h4">My absences</h2>
+    @if (Model.Requests.Count == 0) { <p class="text-muted">No absence records for this month.</p> }
+    else
+    {
+        <div class="table-responsive"><table class="table table-striped align-middle"><thead><tr><th>Type</th><th>Start</th><th>End</th><th>Notes</th><th></th></tr></thead><tbody>
+        @foreach (var item in Model.Requests)
+        { <tr><td>@item.LeaveType.Name</td><td>@item.StartDate.ToString("yyyy-MM-dd")</td><td>@item.EndDate.ToString("yyyy-MM-dd")</td><td>@item.Notes</td><td><a asp-page="/Requests/Edit" asp-route-id="@item.Id">Edit</a></td></tr> }
+        </tbody></table></div>
+    }
+}

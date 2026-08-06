@@ -1,0 +1,5 @@
+bin/
+obj/
+efcom.db
+.git/
+.vs/
