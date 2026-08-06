@@ -215,7 +215,7 @@ public sealed class ReportService(AppDbContext db, WorkCalendarService calendar)
             row.TotalDays = row.DaySets.Values.SelectMany(x => x).Distinct().Count();
             row.SubmissionState = submissions.TryGetValue(rowPair.Key, out var submission)
                 ? (submission.HasAbsence ? "Absences submitted" : "No absence")
-                : "Не заполнял за этот месяц";
+                : "Did not submit this month";
         }
 
         return new ReportView(year, month, types, rows.Values.ToList());
@@ -237,7 +237,7 @@ public sealed class ReportRow(string employeeName)
     public Dictionary<string, int> EntryCounts { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, HashSet<DateTime>> DaySets { get; } = new(StringComparer.OrdinalIgnoreCase);
     public int TotalDays { get; set; }
-    public string SubmissionState { get; set; } = "Не заполнял за этот месяц";
+    public string SubmissionState { get; set; } = "Did not submit this month";
 }
 
 public sealed class EmailService(IConfiguration configuration, ILogger<EmailService> logger)
