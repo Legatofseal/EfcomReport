@@ -1,7 +1,7 @@
 @page
 @model EfcomReport.Pages.Admin.ReportsModel
 @{ ViewData["Title"] = "Reports"; }
-<div class="d-flex justify-content-between align-items-center mb-3"><h1>Reports</h1><form method="get" class="d-flex gap-2"><input class="form-control" type="number" name="month" min="1" max="12" value="@Model.CurrentMonth" /><input class="form-control" type="number" name="year" min="2020" max="2100" value="@Model.CurrentYear" /><button class="btn btn-outline-primary">Open</button></form></div>
+<div class="d-flex justify-content-between align-items-center mb-3"><h1>Reports</h1><form method="get" class="d-flex gap-2" aria-label="Report period"><input class="form-control" type="number" name="month" min="1" max="12" value="@Model.CurrentMonth" onchange="this.form.submit()" aria-label="Month" /><input class="form-control" type="number" name="year" min="2020" max="2100" value="@Model.CurrentYear" onchange="this.form.submit()" aria-label="Year" /><noscript><button class="btn btn-outline-primary">Open</button></noscript></form></div>
 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 @if (Model.Report is not null)
 {
