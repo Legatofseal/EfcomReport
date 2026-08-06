@@ -84,6 +84,27 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     db.Database.EnsureCreated();
+
+    // The pilot started with EnsureCreated rather than migrations. Keep existing
+    // local SQLite databases usable when a new pilot table is added.
+    if (db.Database.IsSqlite())
+    {
+        db.Database.ExecuteSqlRaw("""
+            CREATE TABLE IF NOT EXISTS "ReportRequests" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_ReportRequests" PRIMARY KEY AUTOINCREMENT,
+                "EmployeeId" INTEGER NOT NULL,
+                "Year" INTEGER NOT NULL,
+                "Month" INTEGER NOT NULL,
+                "RequestedByEmail" TEXT NOT NULL,
+                "SentToEmail" TEXT NOT NULL,
+                "RequestedAtUtc" TEXT NOT NULL,
+                CONSTRAINT "FK_ReportRequests_Employees_EmployeeId"
+                    FOREIGN KEY ("EmployeeId") REFERENCES "Employees" ("Id") ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS "IX_ReportRequests_EmployeeId_Year_Month"
+                ON "ReportRequests" ("EmployeeId", "Year", "Month");
+            """);
+    }
 }
 
 app.MapGet("/account/login", (IConfiguration config, string? returnUrl) =>

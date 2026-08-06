@@ -14,6 +14,7 @@ Small monolithic ASP.NET Core Razor Pages application for employee leave trackin
 - Dynamic report columns for additional leave types.
 - CSV download and optional SMTP report delivery.
 - Monthly reminder worker plus a manual local test button.
+- Admin can send a targeted monthly submission request to one employee by email.
 
 ## Local run
 
@@ -50,6 +51,8 @@ $env:Email__Username = "..."
 $env:Email__Password = "..."
 $env:Email__From = "leave-tracker@example.com"
 ```
+
+Set `App__PublicUrl` to the public app URL in Azure so targeted emails contain the correct link.
 
 The reminder worker checks the configured day of month (`Reminder:DayOfMonth`, default `1`). For Azure, a scheduled Azure job is preferable to relying on a background worker in a scaled-out web container.
 

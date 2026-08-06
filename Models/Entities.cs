@@ -81,3 +81,15 @@ public sealed class ReminderRun
     public int Month { get; set; }
     public DateTime SentAtUtc { get; set; } = DateTime.UtcNow;
 }
+
+public sealed class ReportRequest
+{
+    public int Id { get; set; }
+    public int EmployeeId { get; set; }
+    public Employee Employee { get; set; } = null!;
+    public int Year { get; set; }
+    public int Month { get; set; }
+    public string RequestedByEmail { get; set; } = "";
+    public string SentToEmail { get; set; } = "";
+    public DateTime RequestedAtUtc { get; set; } = DateTime.UtcNow;
+}
