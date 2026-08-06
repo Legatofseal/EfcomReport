@@ -12,20 +12,25 @@ public class SettingsModel(AppDbContext db) : PageModel
     public List<Employee> Employees { get; private set; } = [];
     public List<LeaveType> LeaveTypes { get; private set; } = [];
     public List<ReportRecipient> Recipients { get; private set; } = [];
-    [BindProperty] public string EmployeeName { get; set; } = "";
-    [BindProperty, EmailAddress] public string EmployeeEmail { get; set; } = "";
-    [BindProperty] public string LeaveTypeName { get; set; } = "";
-    [BindProperty, EmailAddress] public string RecipientEmail { get; set; } = "";
+    [BindProperty] public string? EmployeeName { get; set; }
+    [BindProperty, EmailAddress] public string? EmployeeEmail { get; set; }
+    [BindProperty] public string? LeaveTypeName { get; set; }
+    [BindProperty, EmailAddress] public string? RecipientEmail { get; set; }
 
     public async Task OnGetAsync() => await LoadAsync();
 
     public async Task<IActionResult> OnPostAddEmployeeAsync()
     {
-        if (string.IsNullOrWhiteSpace(EmployeeName) || !new EmailAddressAttribute().IsValid(EmployeeEmail)) ModelState.AddModelError(string.Empty, "Enter a name and valid email.");
-        if (await db.Employees.AnyAsync(x => x.Email == EmployeeEmail.Trim().ToLowerInvariant())) ModelState.AddModelError(string.Empty, "Employee email already exists.");
+        var name = (EmployeeName ?? "").Trim();
+        var email = (EmployeeEmail ?? "").Trim().ToLowerInvariant();
+        // Validate the normalized values so pasted whitespace does not reject a valid address.
+        ModelState.Remove(nameof(EmployeeName));
+        ModelState.Remove(nameof(EmployeeEmail));
+        if (string.IsNullOrWhiteSpace(name)) ModelState.AddModelError(nameof(EmployeeName), "Enter a name.");
+        if (!new EmailAddressAttribute().IsValid(email)) ModelState.AddModelError(nameof(EmployeeEmail), "Enter a valid email.");
+        if (new EmailAddressAttribute().IsValid(email) && await db.Employees.AnyAsync(x => x.Email == email)) ModelState.AddModelError(nameof(EmployeeEmail), "Employee email already exists.");
         if (!ModelState.IsValid) { await LoadAsync(); return Page(); }
-        var email = EmployeeEmail.Trim().ToLowerInvariant();
-        var employee = new Employee { Name = EmployeeName.Trim(), Email = email };
+        var employee = new Employee { Name = name, Email = email };
         db.Employees.Add(employee);
         var user = await db.AppUsers.SingleOrDefaultAsync(x => x.Email == email);
         if (user is not null) user.Employee = employee;
@@ -39,7 +44,7 @@ public class SettingsModel(AppDbContext db) : PageModel
 
     public async Task<IActionResult> OnPostAddLeaveTypeAsync()
     {
-        var name = LeaveTypeName.Trim();
+        var name = (LeaveTypeName ?? "").Trim();
         if (string.IsNullOrWhiteSpace(name)) ModelState.AddModelError(string.Empty, "Enter a leave type.");
         if (await db.LeaveTypes.AnyAsync(x => x.Name == name)) ModelState.AddModelError(string.Empty, "Leave type already exists.");
         if (!ModelState.IsValid) { await LoadAsync(); return Page(); }
@@ -53,7 +58,7 @@ public class SettingsModel(AppDbContext db) : PageModel
 
     public async Task<IActionResult> OnPostAddRecipientAsync()
     {
-        var email = RecipientEmail.Trim().ToLowerInvariant();
+        var email = (RecipientEmail ?? "").Trim().ToLowerInvariant();
         if (!new EmailAddressAttribute().IsValid(email)) ModelState.AddModelError(string.Empty, "Enter a valid recipient email.");
         if (await db.ReportRecipients.AnyAsync(x => x.Email == email)) ModelState.AddModelError(string.Empty, "Recipient already exists.");
         if (!ModelState.IsValid) { await LoadAsync(); return Page(); }
