@@ -79,6 +79,8 @@ public sealed class UiText
 
     private static readonly IReadOnlyDictionary<string, string> RussianAdditional = new Dictionary<string, string>(StringComparer.Ordinal)
     {
+        ["Remove admin rights"] = "Убрать права администратора",
+        ["Remove administrator rights?"] = "Убрать права администратора у этого пользователя? Сам пользователь останется активным.",
         ["Your Google account is not linked to an employee yet. Ask an administrator to add your email."] = "Ваш аккаунт Google ещё не связан с сотрудником. Попросите администратора добавить ваш адрес.",
         ["Workdays are calculated from the administrator calendar."] = "Рабочие дни рассчитываются по календарю администратора.",
         ["Only for Sick Leave. PDF, JPG or PNG, up to 10 MB."] = "Только для больничного. PDF или JPG/PNG, до 10 МБ.",

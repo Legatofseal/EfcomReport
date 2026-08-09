@@ -121,6 +121,26 @@ public class SettingsModel(AppDbContext db, EmailService email, IConfiguration c
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostRemoveAdministratorAsync(int id)
+    {
+        var admin = await db.AppUsers.SingleOrDefaultAsync(x => x.Id == id && x.Role == "Admin");
+        if (admin is null) return NotFound();
+
+        var currentEmail = currentUser.Email(User);
+        if (string.Equals(admin.Email, currentEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["Message"] = "You cannot remove your own administrator rights.";
+            return RedirectToPage();
+        }
+
+        // Keep the account and its employee link; only remove administrator privileges.
+        admin.Role = "User";
+        admin.IsActive = true;
+        await db.SaveChangesAsync();
+        TempData["Message"] = $"Administrator rights were removed from {admin.Email}. The user account remains active.";
+        return RedirectToPage();
+    }
+
     public async Task<IActionResult> OnPostAddLeaveTypeAsync()
     {
         var name = (LeaveTypeName ?? "").Trim();
