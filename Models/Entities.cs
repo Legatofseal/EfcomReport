@@ -78,6 +78,16 @@ public sealed class ReportRecipient
     public bool IsActive { get; set; } = true;
 }
 
+public sealed class InvoiceRecipient
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public string Email { get; set; } = "";
+    public bool IsActive { get; set; } = true;
+    public bool IsDefault { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
 public sealed class ReminderRun
 {
     public int Id { get; set; }

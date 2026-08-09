@@ -1,17 +1,73 @@
 <!DOCTYPE html>
 <html lang="@T.Language(Context)" dir="@T.Direction(Context)">
 <head>
-    <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>@ViewData["Title"] - EfcomReport</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" /><link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body>
-<header><nav class="navbar navbar-expand-sm navbar-light bg-white border-bottom box-shadow mb-3"><div class="container">
-    <a class="navbar-brand" asp-page="/Index"><img class="site-logo" src="~/images/efcom-logo.png" alt="EfcomReport" /></a>
-    <div class="navbar-collapse d-sm-inline-flex justify-content-between"><ul class="navbar-nav flex-grow-1"><li class="nav-item"><a class="nav-link" asp-page="/Index">@T.Get(Context, "My tracker")</a></li>@if (User.Identity?.IsAuthenticated == true) { <li class="nav-item"><a class="nav-link" href="/Invoices/">@T.Get(Context, "Invoices")</a></li><li class="nav-item"><a class="nav-link" asp-page="/Calendar">@T.Get(Context, "Work calendar")</a></li> }@if (User.IsInRole("Admin")) { <li class="nav-item"><a class="nav-link" asp-page="/Admin/Index">@T.Get(Context, "Administration")</a></li> }</ul>
-    <ul class="navbar-nav align-items-center"> <li class="nav-item language-switcher"><span class="nav-link text-muted">@T.Get(Context, "Language"):</span><a class="nav-link" href="@T.LanguageUrl(Context, "en")">English</a><a class="nav-link" href="@T.LanguageUrl(Context, "he")">עברית</a></li>@if (User.Identity?.IsAuthenticated == true) { <li class="nav-item"><span class="nav-link text-muted">@User.Identity.Name</span></li><li class="nav-item"><a class="nav-link" href="/account/logout">@T.Get(Context, "Sign out")</a></li> } else { <li class="nav-item"><a class="nav-link" href="/account/login">@T.Get(Context, "Sign in")</a></li> }</ul></div>
-</div></nav></header>
-<div class="container"><main role="main" class="pb-3">@if (TempData["Message"] is string message) { <div class="alert alert-success">@message</div> }@RenderBody()</main></div>
-<footer class="border-top footer text-muted"><div class="container">&copy; 2026 - EfcomReport</div></footer>
-<script src="~/lib/jquery/dist/jquery.min.js"></script><script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script><script src="~/js/site.js" asp-append-version="true"></script>@await RenderSectionAsync("Scripts", required: false)
-</body></html>
+<header class="portal-topbar">
+    <nav class="navbar navbar-light bg-white border-bottom box-shadow">
+        <div class="container-fluid portal-topbar-inner">
+            <a class="navbar-brand" asp-page="/Index"><img class="site-logo" src="~/images/efcom-logo.png" alt="EfcomReport" /></a>
+            <ul class="navbar-nav flex-row align-items-center gap-2">
+                <li class="nav-item language-switcher">
+                    <span class="nav-link text-muted">@T.Get(Context, "Language"):</span>
+                    <a class="nav-link" href="@T.LanguageUrl(Context, "en")">English</a>
+                    <a class="nav-link" href="@T.LanguageUrl(Context, "he")">×¢×‘×¨×™×ª</a>
+                </li>
+                @if (User.Identity?.IsAuthenticated == true)
+                {
+                    <li class="nav-item"><span class="nav-link text-muted">@User.Identity.Name</span></li>
+                    <li class="nav-item"><a class="nav-link" href="/account/logout">@T.Get(Context, "Sign out")</a></li>
+                }
+                else
+                {
+                    <li class="nav-item"><a class="nav-link" href="/account/login">@T.Get(Context, "Sign in")</a></li>
+                }
+            </ul>
+        </div>
+    </nav>
+</header>
+
+<div class="portal-shell">
+    <aside class="portal-sidebar">
+        @if (User.Identity?.IsAuthenticated == true)
+        {
+            <div class="sidebar-heading">@T.Get(Context, "Tracker")</div>
+            <a class="sidebar-link" asp-page="/Index">@T.Get(Context, "My tracker")</a>
+            <a class="sidebar-link" asp-page="/Calendar">@T.Get(Context, "Work calendar")</a>
+
+            <div class="sidebar-heading mt-4">@T.Get(Context, "Invoices")</div>
+            <a class="sidebar-link" href="/Invoices/">@T.Get(Context, "Invoice entries")</a>
+            <a class="sidebar-link" asp-page="/Invoices/Create">@T.Get(Context, "New invoice entry")</a>
+
+            @if (User.IsInRole("Admin"))
+            {
+                <div class="sidebar-heading mt-4">@T.Get(Context, "Administration")</div>
+                <a class="sidebar-link" asp-page="/Admin/Index">@T.Get(Context, "Administration")</a>
+                <a class="sidebar-link" asp-page="/Admin/InvoiceRecipients">@T.Get(Context, "Invoice recipients")</a>
+            }
+        }
+    </aside>
+
+    <div class="portal-content">
+        <main role="main" class="pb-3">
+            @if (TempData["Message"] is string message)
+            {
+                <div class="alert alert-success">@message</div>
+            }
+            @RenderBody()
+        </main>
+    </div>
+</div>
+
+<footer class="border-top footer text-muted"><div class="container-fluid">&copy; 2026 - EfcomReport</div></footer>
+<script src="~/lib/jquery/dist/jquery.min.js"></script>
+<script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+<script src="~/js/site.js" asp-append-version="true"></script>
+@await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

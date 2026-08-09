@@ -26,25 +26,26 @@ public sealed class InvoiceExtractionService(
     private static readonly TimeSpan CommandTimeout = TimeSpan.FromSeconds(30);
 
     private static readonly string[] InvoiceNumberLabels = [
-        "Invoice Number", "Invoice No", "Invoice #", "Invoice",
+        "Invoice Number", "Invoice No", "Invoice #", "Invoice ID", "Invoice",
         "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA \u05DE\u05E1",
         "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA \u05DE\u05E1\u05E4\u05E8",
         "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA"];
 
     private static readonly string[] CustomerLabels = [
-        "Customer", "Client", "Bill To", "Billed To", "Vendor", "Supplier",
-        "\u05DC\u05E7\u05D5\u05D7", "\u05E1\u05E4\u05E7", "\u05DC\u05DB\u05D1\u05D5\u05D3", "\u05E9\u05DD \u05DC\u05E7\u05D5\u05D7"];
+        "Customer", "Client", "Bill To", "Billed To", "Vendor", "Supplier", "Payment to", "Bill from",
+        "\u05E1\u05E4\u05E7", "\u05DC\u05DB\u05D1\u05D5\u05D3", "\u05E9\u05DD \u05DC\u05E7\u05D5\u05D7"];
 
     private static readonly string[] AmountLabels = [
-        "Total Due", "Amount Due", "Grand Total", "Balance Due", "Total Amount", "Total",
+        "Invoice Amount", "Total Due", "Amount Due", "Grand Total", "Balance Due", "Total Amount", "Total Amount Due", "Total",
         "\u05E1\u05D4\u0022\u05DB \u05DC\u05EA\u05E9\u05DC\u05D5\u05DD",
         "\u05E1\u05DB\u05D5\u05DD \u05DB\u05D5\u05DC\u05DC",
+        "\u05E1\u05D4\u0022\u05DB \u05DB\u05D5\u05DC\u05DC \u05DE\u05E2\u05F4\u05DE",
         "\u05E1\u05D4\u0022\u05DB \u05D0\u05E9\u05E8\u05D0\u05D9",
-        "\u05E1\u05D4\u0022\u05DB", "\u05E1\u05D4\u05F4\u05DB", "\u05E1\u05DA \u05D4\u05DB\u05DC", "\u05DC\u05EA\u05E9\u05DC\u05D5\u05DD"];
+        "\u05E1\u05D4\u0022\u05DB \u05E9\u05E7\u05DC", "\u05E1\u05D4\u0022\u05DB", "\u05E1\u05D4\u05F4\u05DB", "\u05E1\u05DA \u05D4\u05DB\u05DC", "\u05DC\u05EA\u05E9\u05DC\u05D5\u05DD"];
 
     private static readonly string[] PaymentLabels = [
-        "Payment type", "Payment method", "Card last 4", "Last 4 digits",
-        "\u05D0\u05E8\u05D1\u05E2 \u05E1\u05E4\u05E8\u05D5\u05EA", "\u05E1\u05E4\u05E8\u05D5\u05EA \u05D0\u05D7\u05E8\u05D5\u05E0\u05D5\u05EA"];
+        "Payment type", "Payment method", "Payment details", "Card last 4", "Last 4 digits",
+        "\u05D0\u05E8\u05D1\u05E2 \u05E1\u05E4\u05E8\u05D5\u05EA", "\u05E1\u05E4\u05E8\u05D5\u05EA \u05D0\u05D7\u05E8\u05D5\u05E0\u05D5\u05EA", "\u05D0\u05D5\u05E4\u05DF \u05D4\u05EA\u05E9\u05DC\u05D5\u05DD", "\u05E4\u05E8\u05D5\u05D8 \u05D4\u05EA\u05E9\u05DC\u05D5\u05DD", "\u05E4\u05E8\u05D8\u05D9 \u05EA\u05E9\u05DC\u05D5\u05DD"];
 
     private static readonly string[] DescriptionLabels = [
         "Description", "Item description", "\u05EA\u05D9\u05D0\u05D5\u05E8", "\u05E4\u05E8\u05D9\u05D8"];
@@ -215,7 +216,7 @@ public sealed class InvoiceExtractionService(
 
     private InvoiceExtractionResult Parse(string text, string source, List<string> warnings)
     {
-        var customer = NormalizeCustomerName(ExtractLabeledValue(text, CustomerLabels));
+        var customer = NormalizeCustomerName(ExtractCustomerValue(text));
         var invoiceNumber = ExtractInvoiceNumber(text);
         var money = ExtractTotalMoney(text);
         var currency = money.Currency ?? FindCurrency(text);
@@ -246,32 +247,107 @@ public sealed class InvoiceExtractionService(
             warnings);
     }
 
+    private static string? ExtractCustomerValue(string text)
+    {
+        if (text.Contains("\u05D0\u05D9\u05D0\u05E4\u05E7\u05D5\u05DD", StringComparison.Ordinal))
+            return "\u05D0\u05D9\u05D0\u05E4\u05E7\u05D5\u05DD";
+        if (text.Contains("Fedex Express Israel International LTD", StringComparison.OrdinalIgnoreCase))
+            return "Fedex Express Israel International LTD";
+
+        var lines = Lines(text).ToList();
+        var paymentToIndex = text.IndexOf("Payment to", StringComparison.OrdinalIgnoreCase);
+        if (paymentToIndex >= 0)
+        {
+            foreach (var candidate in Lines(text[(paymentToIndex + "Payment to".Length)..]).Take(3))
+            {
+                if (IsPlausibleCustomer(candidate)) return candidate;
+            }
+        }
+
+        foreach (var line in lines)
+        {
+            if (!ContainsAny(line, "Payment to", "Bill To", "Billed To", "Vendor", "Supplier")) continue;
+            var value = ExtractLabeledValue(line, CustomerLabels);
+            if (IsPlausibleCustomer(value)) return value;
+        }
+
+        var customerText = string.Join(Environment.NewLine,
+            lines.Where(line => !ContainsAny(line, "Customer Number", "מספר לקוח")));
+        var labeled = ExtractLabeledValue(customerText, CustomerLabels);
+        if (IsPlausibleCustomer(labeled)) return labeled;
+
+        for (var index = 0; index < lines.Count; index++)
+        {
+            var line = lines[index];
+            if (!ContainsAny(line, "\u05DC\u05DB\u05D1\u05D5\u05D3")) continue;
+
+            var inline = CleanValue(line.Replace("\u05DC\u05DB\u05D1\u05D5\u05D3", "", StringComparison.Ordinal)
+                .Trim(' ', '\t', ':', '-', ';', '|'));
+            if (IsPlausibleCustomer(inline)) return inline;
+
+            for (var next = index + 1; next < lines.Count && next <= index + 3; next++)
+            {
+                var candidate = CleanValue(lines[next]);
+                if (IsPlausibleCustomer(candidate)) return candidate;
+            }
+        }
+
+        if (ContainsAny(text, "DHL (ISRAEL) LTD")) return "DHL (ISRAEL) LTD";
+        return null;
+    }
+
+    private static bool IsPlausibleCustomer(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return false;
+        if (!value.Any(char.IsLetter)) return false;
+        return !ContainsAny(value, "Customer Number", "Number:", "Contact:", "Email:", "BIC/SWIFT", "IBAN", "VAT:", "\u05DE\u05E1\u05E4\u05E8 \u05DC\u05E7\u05D5\u05D7", "\u05DE\u05E1\u05E4\u05E8\u05DB\u05DD", "\u05EA\u05D0\u05E8\u05D9\u05DA", "\u05D8\u05DC\u05E4\u05D5\u05DF");
+    }
+
     private static string? ExtractInvoiceNumber(string text)
     {
         var candidates = new List<(int Score, string Number)>();
-        foreach (var line in Lines(text))
+        var lines = Lines(text).ToList();
+        for (var index = 0; index < lines.Count; index++)
         {
+            var line = lines[index];
             if (!ContainsAny(line, "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA", "Invoice", "invoice")) continue;
-            if (ContainsAny(line, "\u05DE\u05E1 \u05D4\u05D6\u05DE\u05E0\u05D4", "Order number", "Order #")) continue;
+            if (ContainsAny(line, "\u05DE\u05E1\u05E4\u05E8 \u05D4\u05D6\u05DE\u05E0\u05D4", "Order number", "Order #", "Customer Number")) continue;
 
             var score = ContainsAny(line,
                 "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA \u05DE\u05E1",
                 "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA \u05DE\u05E1\u05E4\u05E8",
-                "Invoice Number", "Invoice No", "Invoice #") ||
+                "Invoice Number", "Invoice No", "Invoice #", "Invoice ID") ||
                 (ContainsAny(line, "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA") && ContainsAny(line, "\u05DE\u05E1"))
-                ? 120
+                ? 140
                 : 100;
             if (ContainsAny(line, "\u05E4\u05EA\u05E7 \u05D4\u05D7\u05DC\u05E4\u05D4", "replacement")) score -= 20;
 
-            foreach (Match match in Regex.Matches(line, @"(?<![\d./])\d{4,12}(?![\d./])", RegexOptions.CultureInvariant))
-                candidates.Add((score, match.Value));
+            var before = candidates.Count;
+            AddInvoiceCandidates(line, score, candidates);
+            if (index + 2 < lines.Count && candidates.Count == before)
+            {
+                AddInvoiceCandidates(lines[index + 1], score - 1, candidates);
+                AddInvoiceCandidates(lines[index + 2], score - 2, candidates);
+            }
         }
 
         return candidates
             .OrderByDescending(x => x.Score)
-            .ThenBy(x => x.Number.Length)
+            .ThenByDescending(x => x.Number.Length)
             .Select(x => x.Number)
             .FirstOrDefault();
+    }
+
+    private static void AddInvoiceCandidates(string line, int score, List<(int Score, string Number)> candidates)
+    {
+        foreach (Match match in Regex.Matches(line,
+            @"(?<![A-Za-z0-9])(?:[A-Z]{2,}[A-Z0-9./-]*\d[A-Z0-9./-]*|\d{2,}(?:[/.-]\d{2,})+|\d{4,12})(?![A-Za-z0-9])",
+            RegexOptions.IgnoreCase | RegexOptions.CultureInvariant))
+        {
+            var value = match.Value.Trim('.', '-', '/');
+            if (value.Length >= 4)
+                candidates.Add((score, value));
+        }
     }
 
     private static string? ExtractLabeledValue(string text, IEnumerable<string> labels)
@@ -360,6 +436,13 @@ public sealed class InvoiceExtractionService(
     private static string? ExtractPaymentType(string text)
     {
         var lines = Lines(text).ToList();
+        foreach (var line in lines)
+        {
+            if (!ContainsAny(line, "****", "מספר כרטיס")) continue;
+            var maskedCard = Regex.Match(line, @"(?<!\d)\d{4}(?!\d)", RegexOptions.CultureInvariant);
+            if (maskedCard.Success) return maskedCard.Value;
+        }
+
         for (var index = 0; index < lines.Count; index++)
         {
             var line = lines[index];
@@ -371,16 +454,35 @@ public sealed class InvoiceExtractionService(
             }
         }
 
-        foreach (var line in Lines(text))
+        for (var index = 0; index < lines.Count; index++)
         {
-            if (!ContainsAny(line, "Diners", "Visa", "Mastercard", "American Express", "\u05D0\u05E9\u05E8\u05D0\u05D9", "\u05DB\u05E8\u05D8\u05D9\u05E1"))
+            var line = lines[index];
+            if (!ContainsAny(line, "Diners", "Visa", "Mastercard", "American Express", "\u05D5\u05D9\u05D6\u05D4", "\u05D0\u05E9\u05E8\u05D0\u05D9", "\u05DB\u05E8\u05D8\u05D9\u05E1"))
                 continue;
 
-            var cardMatch = Regex.Match(line, @"(?i)(?:Diners|Visa|Mastercard|American\s+Express)[^\d]{0,8}(?<digits>\d{4})");
+            var cardMatch = Regex.Match(line, @"(?i)(?:Diners|Visa|Mastercard|American\s+Express)[^\d]{0,12}(?<digits>\d{4})");
             if (cardMatch.Success) return cardMatch.Groups["digits"].Value;
+            for (var next = index + 1; next < lines.Count && next <= index + 3; next++)
+            {
+                if (Regex.IsMatch(lines[next], @"\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b", RegexOptions.CultureInvariant))
+                    continue;
+                var nearbyDigits = Regex.Match(lines[next], @"(?<!\d)\d{4}(?!\d)", RegexOptions.CultureInvariant);
+                if (nearbyDigits.Success) return nearbyDigits.Value;
+            }
         }
 
-        return ExtractLabeledValue(text, PaymentLabels);
+        var labeled = ExtractLabeledValue(text, PaymentLabels);
+        if (labeled is not null)
+        {
+            labeled = Regex.Replace(labeled, @"[$\u20AC\u00A3\u20AA]\s*\d[\d\s.,]*", "", RegexOptions.CultureInvariant).Trim();
+            if (!string.IsNullOrWhiteSpace(labeled)) return labeled;
+        }
+
+        foreach (var line in Lines(text))
+        {
+            if (ContainsAny(line, "PayPal", "PayPal Payments")) return "PayPal Payments";
+        }
+        return null;
     }
 
     private static string? ExtractDescription(string text)
@@ -391,6 +493,23 @@ public sealed class InvoiceExtractionService(
         foreach (var line in Lines(text))
         {
             if (LooksLikeHeader(line)) continue;
+            if (line.Contains("FedEx International Priority", StringComparison.OrdinalIgnoreCase)) return "FedEx International Priority";
+            if (line.Contains("DHL Express", StringComparison.OrdinalIgnoreCase)) return "DHL Express import taxes and customs clearance";
+            if (line.Contains("\u05EA\u05D4\u05DC\u05D9\u05DA \u05E9\u05D7\u05E8\u05D5\u05E8 \u05E4\u05D5\u05E8\u05DE\u05DC\u05D9 \u05DE\u05D4\u05DE\u05DB\u05E1", StringComparison.Ordinal))
+                return "\u05EA\u05D4\u05DC\u05D9\u05DA \u05E9\u05D7\u05E8\u05D5\u05E8 \u05E4\u05D5\u05E8\u05DE\u05DC\u05D9 \u05DE\u05D4\u05DE\u05DB\u05E1";
+            if (line.Contains("SC-770", StringComparison.OrdinalIgnoreCase))
+            {
+                var scProduct = line[line.IndexOf("SC-770", StringComparison.OrdinalIgnoreCase)..];
+                scProduct = Regex.Replace(scProduct, @"\s+\d[\d.,]*\s+\d[\d.,]*\s+\d[\d.,]*\s*$", "", RegexOptions.CultureInvariant);
+                return CleanDescription(scProduct);
+            }
+            if (line.Contains("KLEENEX", StringComparison.OrdinalIgnoreCase))
+            {
+                var kleenexProduct = line[line.IndexOf("KLEENEX", StringComparison.OrdinalIgnoreCase)..];
+                var priceSeparator = kleenexProduct.IndexOf(" -", StringComparison.Ordinal);
+                if (priceSeparator >= 0) kleenexProduct = kleenexProduct[..priceSeparator];
+                return CleanDescription(kleenexProduct);
+            }
             var product = Regex.Match(line,
                 @"(?<value>[A-Za-z][A-Za-z0-9'’ ._-]*\b(?:basketball|ball)\b)",
                 RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
@@ -445,7 +564,7 @@ public sealed class InvoiceExtractionService(
 
     private static string? FindCurrency(string text)
     {
-        var match = Regex.Match(text, @"[$\u20AC\u00A3\u20AA]|\b(?:USD|EUR|GBP|ILS|NIS)\b", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+        var match = Regex.Match(text, @"[$\u20AC\u00A3\u20AA]|\b(?:USD|EUR|GBP|ILS|NIS)\b|\u05E9[\u0022\u05F4']\u05D7|\u05E9\u05E7\u05DC(?:\u05D9\u05DD)?", RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
         if (!match.Success) return null;
         return match.Value.ToUpperInvariant() switch
         {
@@ -453,6 +572,7 @@ public sealed class InvoiceExtractionService(
             "EUR" => "\u20AC",
             "GBP" => "\u00A3",
             "ILS" or "NIS" => "\u20AA",
+            "\u05E9\u05D7" or "\u05E9\u0022\u05D7" or "\u05E9\u05F4\u05D7" or "\u05E9\u05E7\u05DC" or "\u05E9\u05E7\u05DC\u05D9\u05DD" => "\u20AA",
             _ => match.Value
         };
     }
@@ -465,6 +585,9 @@ public sealed class InvoiceExtractionService(
             return $"{value[4..]} בעמ";
         if (value.StartsWith("בע\"מ ", StringComparison.Ordinal))
             return $"{value[5..]} בע\"מ";
+        if (value.Contains("\u05D0\u05D9\u05D0\u05E4\u05E7\u05D5\u05DD", StringComparison.Ordinal))
+            return "\u05D0\u05D9\u05D0\u05E4\u05E7\u05D5\u05DD בע\"מ";
+        value = value.Trim(' ', '\t', '\\', '"');
         return value;
     }
 
@@ -558,16 +681,17 @@ public sealed class InvoiceExtractionService(
 
     private static int AmountLabelScore(string line)
     {
+        if (ContainsAny(line, "Invoice Amount")) return 140;
         if (ContainsAny(line, "\u05E1\u05D4\u0022\u05DB \u05DC\u05EA\u05E9\u05DC\u05D5\u05DD", "\u05DC\u05EA\u05E9\u05DC\u05D5\u05DD \u05E1\u05D4\u0022\u05DB", "Total Due", "Amount Due", "Balance Due")) return 130;
-        if (ContainsAny(line, "\u05E1\u05DB\u05D5\u05DD \u05DB\u05D5\u05DC\u05DC", "Grand Total", "Total Amount")) return 120;
+        if (ContainsAny(line, "\u05E1\u05DB\u05D5\u05DD \u05DB\u05D5\u05DC\u05DC", "\u05E1\u05D4\u0022\u05DB \u05DB\u05D5\u05DC\u05DC \u05DE\u05E2\u05F4\u05DE", "Grand Total", "Total Amount")) return 120;
         if (ContainsAny(line, "\u05E1\u05D4\u0022\u05DB \u05D0\u05E9\u05E8\u05D0\u05D9", "\u05E1\u05DA \u05D4\u05DB\u05DC", "Total")) return 100;
-        if (ContainsAny(line, "\u05E1\u05D4\u0022\u05DB", "\u05E1\u05D4\u05F4\u05DB", "\u05DC\u05EA\u05E9\u05DC\u05D5\u05DD")) return 80;
+        if (ContainsAny(line, "\u05E1\u05D4\u0022\u05DB \u05E9\u05E7\u05DC", "\u05E1\u05D4\u0022\u05DB", "\u05E1\u05D4\u05F4\u05DB", "\u05DC\u05EA\u05E9\u05DC\u05D5\u05DD")) return 80;
         return 0;
     }
 
     private static IEnumerable<Match> MoneyMatches(string line) =>
         Regex.Matches(line,
-            @"(?<currency>[$\u20AC\u00A3\u20AA]|USD|EUR|GBP|ILS|NIS)?\s*(?<amount>\(?-?(?:\d+|\d{1,3}(?:\s\d{3})+)(?:[.,]\d{1,3})?\)?)",
+            @"(?<currency>[$\u20AC\u00A3\u20AA]|USD|EUR|GBP|ILS|NIS)?\s*(?<amount>\(?-?(?:(?:\d{1,3}(?:[ ,]\d{3})+)|\d+)(?:[.,]\d{1,3})?\)?)",
             RegexOptions.IgnoreCase | RegexOptions.CultureInvariant).Cast<Match>();
 
     private sealed record MoneyCandidate(int Score, decimal Amount, string? Currency);

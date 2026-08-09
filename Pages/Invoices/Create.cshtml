@@ -9,7 +9,21 @@
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
     <div class="col-md-6">
         <label asp-for="RecipientEmail" class="form-label">@T.Get(Context, "Recipient email")</label>
-        <input asp-for="RecipientEmail" class="form-control" type="email" />
+        @if (Model.RecipientOptions.Count > 0)
+        {
+            <select asp-for="RecipientEmail" class="form-select">
+                <option value="">@T.Get(Context, "Select invoice recipient")</option>
+                @foreach (var recipient in Model.RecipientOptions)
+                {
+                    <option value="@recipient.Email">@recipient.Name (@recipient.Email)@(recipient.IsDefault ? $" - {T.Get(Context, "Default")}" : "")</option>
+                }
+            </select>
+        }
+        else
+        {
+            <input asp-for="RecipientEmail" class="form-control" type="email" disabled />
+            <div class="form-text text-warning">@T.Get(Context, "No active invoice recipients are configured. Ask an administrator to add one.")</div>
+        }
         <span asp-validation-for="RecipientEmail" class="text-danger"></span>
     </div>
     <div class="col-md-6">

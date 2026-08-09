@@ -1,5 +1,7 @@
 using System.Data;
 using EfcomReport.Data;
+using EfcomReport.Models;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 
 namespace EfcomReport.Services;
@@ -50,7 +52,32 @@ public static class PortalDatabaseInitializer
             ON "InvoiceEntries" ("CreatedAtUtc");
             CREATE INDEX IF NOT EXISTS "IX_InvoiceEntries_InvoiceNumber"
             ON "InvoiceEntries" ("InvoiceNumber");
+            CREATE TABLE IF NOT EXISTS "InvoiceRecipients" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_InvoiceRecipients" PRIMARY KEY AUTOINCREMENT,
+                "Name" TEXT NOT NULL,
+                "Email" TEXT NOT NULL,
+                "IsActive" INTEGER NOT NULL,
+                "IsDefault" INTEGER NOT NULL,
+                "CreatedAtUtc" TEXT NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_InvoiceRecipients_Email"
+            ON "InvoiceRecipients" ("Email");
             """);
+
+        var configuredDefault = (scope.ServiceProvider.GetRequiredService<IConfiguration>()[
+            "Invoice:DefaultRecipientEmail"] ?? "").Trim().ToLowerInvariant();
+        if (new System.ComponentModel.DataAnnotations.EmailAddressAttribute().IsValid(configuredDefault) &&
+            !db.InvoiceRecipients.Any())
+        {
+            db.InvoiceRecipients.Add(new InvoiceRecipient
+            {
+                Name = configuredDefault,
+                Email = configuredDefault,
+                IsActive = true,
+                IsDefault = true
+            });
+            db.SaveChanges();
+        }
 
         EnsureSqliteColumn(db, "AttachmentOriginalName", "TEXT NULL");
         EnsureSqliteColumn(db, "AttachmentStorageName", "TEXT NULL");
