@@ -9,13 +9,14 @@ using Microsoft.EntityFrameworkCore;
 namespace EfcomReport.Pages;
 
 [Authorize]
-public class IndexModel(AppDbContext db, CurrentUserService currentUser) : PageModel
+public class IndexModel(AppDbContext db, CurrentUserService currentUser, SubmissionService submissions) : PageModel
 {
     [BindProperty(SupportsGet = true)] public int? Month { get; set; }
     [BindProperty(SupportsGet = true)] public int? Year { get; set; }
     public AppUser? UserRecord { get; private set; }
     public List<AbsenceRequest> Requests { get; private set; } = [];
-    public string SubmissionState { get; private set; } = "Missing";
+    public string SubmissionState { get; private set; } = "Not confirmed";
+    public DateTime? ConfirmedAtUtc { get; private set; }
     public int CurrentMonth => Month ?? DateTime.Today.Month;
     public int CurrentYear => Year ?? DateTime.Today.Year;
 
@@ -29,29 +30,17 @@ public class IndexModel(AppDbContext db, CurrentUserService currentUser) : PageM
             .Where(x => x.EmployeeId == employeeId && !x.IsCancelled && x.StartDate <= end && x.EndDate >= start)
             .OrderBy(x => x.StartDate).ToListAsync();
         var submission = await db.MonthlySubmissions.SingleOrDefaultAsync(x => x.EmployeeId == employeeId && x.Year == CurrentYear && x.Month == CurrentMonth);
-        SubmissionState = submission is null ? "Missing" : submission.HasAbsence ? "Absences submitted" : "No absence";
+        SubmissionState = submission?.IsConfirmed == true ? "Confirmed" : "Not confirmed";
+        ConfirmedAtUtc = submission?.ConfirmedAtUtc;
     }
 
-    public async Task<IActionResult> OnPostNoAbsenceAsync(int year, int month)
+    public async Task<IActionResult> OnPostConfirmAsync(int year, int month)
     {
         var user = await currentUser.GetAsync(User);
         if (user?.EmployeeId is not int employeeId) return Forbid();
-        var start = new DateTime(year, month, 1);
-        var end = start.AddMonths(1).AddDays(-1);
-        if (await db.AbsenceRequests.AnyAsync(x => x.EmployeeId == employeeId && !x.IsCancelled && x.StartDate <= end && x.EndDate >= start))
-        {
-            TempData["Message"] = "You already have an absence in this month. Edit or cancel it instead of submitting No absence.";
-            return RedirectToPage(new { month, year });
-        }
-        var submission = await db.MonthlySubmissions.SingleOrDefaultAsync(x => x.EmployeeId == employeeId && x.Year == year && x.Month == month);
-        if (submission is null)
-        {
-            submission = new MonthlySubmission { EmployeeId = employeeId, Year = year, Month = month };
-            db.MonthlySubmissions.Add(submission);
-        }
-        submission.HasAbsence = false;
-        submission.SubmittedAtUtc = DateTime.UtcNow;
-        await db.SaveChangesAsync();
+        if (year is < 2020 or > 2100 || month is < 1 or > 12) return BadRequest();
+        await submissions.ConfirmAsync(employeeId, year, month);
+        TempData["Message"] = "Monthly report confirmed.";
         return RedirectToPage(new { month, year });
     }
 }

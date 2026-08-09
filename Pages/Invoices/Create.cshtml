@@ -3,7 +3,7 @@
 @{ ViewData["Title"] = T.Get(Context, "New invoice entry"); }
 
 <h1>@T.Get(Context, "New invoice entry")</h1>
-<p class="text-muted">@T.Get(Context, "Submit an invoice entry and send it by email with its document.")</p>
+<p class="text-muted">@T.Get(Context, "Submit an invoice entry and send it by email with its document. The document is not stored in the portal.")</p>
 
 <form method="post" enctype="multipart/form-data" class="row g-3">
     <div asp-validation-summary="ModelOnly" class="text-danger"></div>
@@ -48,8 +48,27 @@
     </div>
     <div class="col-md-6">
         <label asp-for="PaymentType" class="form-label">@T.Get(Context, "Payment type / reference")</label>
-        <input asp-for="PaymentType" class="form-control" placeholder="Bank transfer, card, last 4 digits..." />
+        @if (Model.PaymentTypeOptions.Count > 0)
+        {
+            <select asp-for="PaymentType" class="form-select">
+                <option value="">@T.Get(Context, "Select payment type")</option>
+                @foreach (var option in Model.PaymentTypeOptions)
+                {
+                    <option value="@option.Name">@option.Name</option>
+                }
+            </select>
+        }
+        else
+        {
+            <div class="form-text text-warning">@T.Get(Context, "No active payment types are configured. Ask an administrator to add one.")</div>
+        }
         <span asp-validation-for="PaymentType" class="text-danger"></span>
+    </div>
+    <div class="col-md-6 d-flex align-items-end">
+        <div class="form-check mb-2">
+            <input asp-for="IsPlaceholder" class="form-check-input" />
+            <label asp-for="IsPlaceholder" class="form-check-label">@T.Get(Context, "Placeholder - not a real invoice")</label>
+        </div>
     </div>
     <div class="col-md-6">
         <label asp-for="Attachment" class="form-label">@T.Get(Context, "Invoice document") <span class="text-muted">(@T.Get(Context, "optional"))</span></label>
@@ -112,7 +131,6 @@
                         ['InvoiceNumber', result.invoiceNumber],
                         ['CurrencySymbol', result.currencySymbol],
                         ['Amount', result.amount],
-                        ['PaymentType', result.paymentType],
                         ['Comments', result.comments]
                     ];
                     for (const [name, value] of fields) {

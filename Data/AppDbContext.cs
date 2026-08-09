@@ -13,6 +13,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<WorkdayOverride> WorkdayOverrides => Set<WorkdayOverride>();
     public DbSet<ReportRecipient> ReportRecipients => Set<ReportRecipient>();
     public DbSet<InvoiceRecipient> InvoiceRecipients => Set<InvoiceRecipient>();
+    public DbSet<PaymentTypeOption> PaymentTypeOptions => Set<PaymentTypeOption>();
     public DbSet<ReminderRun> ReminderRuns => Set<ReminderRun>();
     public DbSet<ReportRequest> ReportRequests => Set<ReportRequest>();
     public DbSet<InvoiceEntry> InvoiceEntries => Set<InvoiceEntry>();
@@ -26,6 +27,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         modelBuilder.Entity<WorkdayOverride>().HasIndex(x => x.Date).IsUnique();
         modelBuilder.Entity<ReportRecipient>().HasIndex(x => x.Email).IsUnique();
         modelBuilder.Entity<InvoiceRecipient>().HasIndex(x => x.Email).IsUnique();
+        modelBuilder.Entity<PaymentTypeOption>().HasIndex(x => x.Name).IsUnique();
         modelBuilder.Entity<ReminderRun>().HasIndex(x => new { x.Year, x.Month }).IsUnique();
         modelBuilder.Entity<ReportRequest>().HasIndex(x => new { x.EmployeeId, x.Year, x.Month });
         modelBuilder.Entity<InvoiceEntry>().HasIndex(x => x.CreatedAtUtc);

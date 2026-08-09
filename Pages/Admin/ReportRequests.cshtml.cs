@@ -23,7 +23,7 @@ public class ReportRequestsModel(AppDbContext db, EmailService email, CurrentUse
         await LoadAsync();
         SelectedEmployeeIds = EmployeeIds is { Count: > 0 }
             ? NormalizeSelection(EmployeeIds)
-            : EmployeeStatuses.Where(x => x.State == "Did not submit this month").Select(x => x.Employee.Id).ToList();
+            : EmployeeStatuses.Where(x => x.State == "Not confirmed").Select(x => x.Employee.Id).ToList();
     }
 
     public async Task<IActionResult> OnPostSendAsync(int year, int month)
@@ -46,13 +46,13 @@ public class ReportRequestsModel(AppDbContext db, EmailService email, CurrentUse
         var admin = await currentUser.GetAsync(User);
         var publicUrl = (configuration["App:PublicUrl"] ?? "http://localhost:5186").TrimEnd('/');
         var link = $"{publicUrl}/?month={month}&year={year}";
-        var subject = $"Action required: leave submission for {year}-{month:00}";
+        var subject = $"Action required: confirm leave report for {year}-{month:00}";
         var sentCount = 0;
         var errors = new List<string>();
 
         foreach (var employee in employees)
         {
-            var body = $"Hello {employee.Name},\n\nPlease open the leave tracker and submit your absence information for {year}-{month:00}. If you had no absence, choose 'No absence this month'.\n\nOpen the tracker: {link}\n\nThis request was sent by {admin?.Email ?? "an administrator"}.";
+            var body = $"Hello {employee.Name},\n\nPlease open the leave tracker, fill in your absence information for {year}-{month:00}, and confirm the monthly report.\n\nOpen the tracker: {link}\n\nThis request was sent by {admin?.Email ?? "an administrator"}.";
             try
             {
                 await email.SendAsync([employee.Email], subject, body);
@@ -89,8 +89,8 @@ public class ReportRequestsModel(AppDbContext db, EmailService email, CurrentUse
         EmployeeStatuses = employees.Select(employee => new EmployeeSubmissionStatus(
             employee,
             submissions.TryGetValue(employee.Id, out var submission)
-                ? (submission.HasAbsence ? "Absences submitted" : "No absence")
-                : "Did not submit this month")).ToList();
+                ? (submission.IsConfirmed ? "Confirmed" : "Not confirmed")
+                : "Not confirmed")).ToList();
         RecentRequests = await db.ReportRequests
             .Include(x => x.Employee)
             .OrderByDescending(x => x.RequestedAtUtc)

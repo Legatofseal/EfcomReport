@@ -8,7 +8,6 @@ public sealed record InvoiceSubmissionResult(bool EmailSent);
 
 public sealed class InvoiceService(
     AppDbContext db,
-    AttachmentService attachments,
     EmailService email,
     ILogger<InvoiceService> logger)
 {
@@ -17,44 +16,37 @@ public sealed class InvoiceService(
         IFormFile? attachment,
         CancellationToken cancellationToken = default)
     {
-        StoredAttachment? storedAttachment = null;
-        try
+        byte[]? attachmentBytes = null;
+        string? attachmentName = null;
+        string? attachmentContentType = null;
+        if (attachment is not null)
         {
-            if (attachment is not null)
-                storedAttachment = await attachments.SaveInvoiceAsync(attachment, cancellationToken);
-
-            entry.AttachmentOriginalName = storedAttachment?.OriginalName;
-            entry.AttachmentStorageName = storedAttachment?.StorageName;
-            entry.AttachmentContentType = storedAttachment?.ContentType;
-            entry.AttachmentSize = storedAttachment?.Size;
-            entry.CreatedAtUtc = DateTime.UtcNow;
-            db.InvoiceEntries.Add(entry);
-            await db.SaveChangesAsync(cancellationToken);
-        }
-        catch
-        {
-            if (storedAttachment is not null) attachments.DeleteInvoice(storedAttachment.StorageName);
-            throw;
+            await using var stream = new MemoryStream();
+            await attachment.CopyToAsync(stream, cancellationToken);
+            attachmentBytes = stream.ToArray();
+            attachmentName = Path.GetFileName(attachment.FileName);
+            attachmentContentType = ContentTypeFor(Path.GetExtension(attachmentName));
         }
 
+        // Invoice documents are deliberately never persisted. They exist only in memory
+        // long enough to be attached to the outgoing email.
+        entry.AttachmentOriginalName = null;
+        entry.AttachmentStorageName = null;
+        entry.AttachmentContentType = null;
+        entry.AttachmentSize = null;
+        entry.CreatedAtUtc = DateTime.UtcNow;
+        db.InvoiceEntries.Add(entry);
+        await db.SaveChangesAsync(cancellationToken);
+
         try
         {
-            byte[]? attachmentBytes = null;
-            if (!string.IsNullOrWhiteSpace(entry.AttachmentStorageName))
-            {
-                var path = attachments.GetInvoicePath(entry.AttachmentStorageName);
-                if (path is null || !File.Exists(path))
-                    throw new FileNotFoundException("The invoice attachment could not be found.");
-                attachmentBytes = await File.ReadAllBytesAsync(path, cancellationToken);
-            }
-
             await email.SendDocumentAsync(
                 [entry.RecipientEmail],
                 BuildSubject(entry),
                 BuildBody(entry),
                 attachmentBytes,
-                entry.AttachmentOriginalName,
-                entry.AttachmentContentType);
+                attachmentName,
+                attachmentContentType);
 
             entry.EmailSentAtUtc = DateTime.UtcNow;
             entry.EmailError = null;
@@ -74,21 +66,15 @@ public sealed class InvoiceService(
     public static string BuildSubject(InvoiceEntry entry)
     {
         var amount = entry.Amount.ToString("0.00", CultureInfo.InvariantCulture);
-        return string.Join(",", [
-            "EFCOM_INVOICE",
-            Clean(entry.Customer),
-            Clean(entry.InvoiceNumber),
-            $"{Clean(entry.CurrencySymbol)}{amount}",
-            Clean(entry.PaymentType),
-            Clean(entry.Comments)]);
+        var marker = entry.IsPlaceholder ? "EFCOM_INVOICE_PLACEHOLDER" : "EFCOM_INVOICE";
+        return $"{marker},[{Clean(entry.Customer)}],[{Clean(entry.InvoiceNumber)}],[{Clean(entry.CurrencySymbol)}{amount}],[{Clean(entry.PaymentType)}],[{Clean(entry.Comments)}]";
     }
 
     public static string BuildBody(InvoiceEntry entry)
     {
-        var attachment = string.IsNullOrWhiteSpace(entry.AttachmentOriginalName)
-            ? "No attachment."
-            : entry.AttachmentOriginalName;
+        var attachment = "Attached to this email only; it is not stored in the portal.";
         return $"New Accounting Entry\n\n" +
+               $"Placeholder: {(entry.IsPlaceholder ? "Yes" : "No")}\n" +
                $"Customer: {entry.Customer}\n" +
                $"Invoice: {entry.InvoiceNumber}\n" +
                $"Amount: {entry.CurrencySymbol}{entry.Amount.ToString("0.00", CultureInfo.InvariantCulture)}\n" +
@@ -97,6 +83,14 @@ public sealed class InvoiceService(
                $"Attachment: {attachment}\n" +
                $"Submitted by: {entry.SubmittedByEmail}";
     }
+
+    private static string ContentTypeFor(string? extension) => extension?.ToLowerInvariant() switch
+    {
+        ".pdf" => "application/pdf",
+        ".jpg" or ".jpeg" => "image/jpeg",
+        ".png" => "image/png",
+        _ => "application/octet-stream"
+    };
 
     private static string Clean(string? value) =>
         (value ?? "").Replace('\r', ' ').Replace('\n', ' ').Trim();

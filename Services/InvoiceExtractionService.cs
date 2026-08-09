@@ -220,13 +220,13 @@ public sealed class InvoiceExtractionService(
         var invoiceNumber = ExtractInvoiceNumber(text);
         var money = ExtractTotalMoney(text);
         var currency = money.Currency ?? FindCurrency(text);
-        var paymentType = ExtractPaymentType(text);
+        // Payment type is intentionally selected from the administrator-maintained list.
+        var paymentType = (string?)null;
         var comments = ExtractDescription(text);
 
         if (customer is null) warnings.Add("Customer was not detected.");
         if (invoiceNumber is null) warnings.Add("Invoice number was not detected.");
         if (money.Amount is null) warnings.Add("Total amount was not detected.");
-        if (paymentType is null) warnings.Add("Payment reference or card digits were not detected.");
         if (comments is null) warnings.Add("Item description was not detected.");
 
         var found = new[] {

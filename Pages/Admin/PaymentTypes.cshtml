@@ -1,0 +1,62 @@
+@page
+@model EfcomReport.Pages.Admin.PaymentTypesModel
+@{ ViewData["Title"] = T.Get(Context, "Payment types"); }
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <div>
+        <h1 class="mb-1">@T.Get(Context, "Payment types")</h1>
+        <p class="text-muted mb-0">@T.Get(Context, "Manage the payment types available when submitting an invoice.")</p>
+    </div>
+    <a class="btn btn-outline-secondary" asp-page="/Admin/Index">@T.Get(Context, "Administration")</a>
+</div>
+
+<div asp-validation-summary="ModelOnly" class="text-danger"></div>
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="h5">@T.Get(Context, "Add payment type")</h2>
+        <form method="post" asp-page-handler="Add" class="row g-2 align-items-end">
+            <div class="col-md-8">
+                <label asp-for="PaymentTypeName" class="form-label">@T.Get(Context, "Payment type")</label>
+                <input asp-for="PaymentTypeName" class="form-control" placeholder="Bank transfer" />
+                <span asp-validation-for="PaymentTypeName" class="text-danger small"></span>
+            </div>
+            <div class="col-md-4">
+                <button class="btn btn-primary w-100" type="submit">@T.Get(Context, "Add")</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <h2 class="h5">@T.Get(Context, "Configured payment types")</h2>
+        <div class="table-responsive">
+            <table class="table align-middle mb-0">
+                <thead><tr><th>@T.Get(Context, "Payment type")</th><th>@T.Get(Context, "Status")</th><th></th></tr></thead>
+                <tbody>
+                @if (Model.Options.Count == 0)
+                {
+                    <tr><td colspan="3" class="text-muted">@T.Get(Context, "No payment types configured yet.")</td></tr>
+                }
+                @foreach (var option in Model.Options)
+                {
+                    <tr>
+                        <td>@option.Name</td>
+                        <td>@T.Get(Context, option.IsActive ? "Active" : "Inactive")</td>
+                        <td class="text-end">
+                            <form method="post" asp-page-handler="Toggle" class="d-inline">
+                                <input type="hidden" name="id" value="@option.Id" />
+                                <button class="btn btn-sm btn-outline-secondary" type="submit">@T.Get(Context, "Toggle")</button>
+                            </form>
+                        </td>
+                    </tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

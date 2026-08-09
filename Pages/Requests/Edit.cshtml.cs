@@ -77,7 +77,9 @@ public class EditModel(AppDbContext db, CurrentUserService currentUser, Submissi
         if (request is null) return NotFound();
         if (user is null || (user.Role != "Admin" && user.EmployeeId != request.EmployeeId)) return Forbid();
         request.IsCancelled = true; request.CancelledByEmail = user.Email; request.CancelledAtUtc = DateTime.UtcNow; request.UpdatedAtUtc = DateTime.UtcNow;
-        await db.SaveChangesAsync(); return RedirectToPage("/Index");
+        await db.SaveChangesAsync();
+        await submissions.RefreshRangeAsync(request.EmployeeId, request.StartDate, request.EndDate);
+        return RedirectToPage("/Index", new { month = request.StartDate.Month, year = request.StartDate.Year });
     }
 
     private async Task<bool> LoadAsync()

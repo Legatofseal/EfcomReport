@@ -17,7 +17,9 @@ public sealed class CreateModel(
     AppDbContext db) : PageModel
 {
     public List<InvoiceRecipient> RecipientOptions { get; private set; } = [];
+    public List<PaymentTypeOption> PaymentTypeOptions { get; private set; } = [];
     public bool HasInvoiceRecipients { get; private set; }
+    public bool HasPaymentTypeOptions => PaymentTypeOptions.Count > 0;
 
     [BindProperty, Required, EmailAddress, StringLength(320)]
     public string RecipientEmail { get; set; } = "";
@@ -37,6 +39,9 @@ public sealed class CreateModel(
     [BindProperty, Required, StringLength(100)]
     public string PaymentType { get; set; } = "";
 
+    [BindProperty]
+    public bool IsPlaceholder { get; set; }
+
     [BindProperty, StringLength(2000)]
     public string? Comments { get; set; }
 
@@ -45,7 +50,7 @@ public sealed class CreateModel(
 
     public async Task OnGetAsync()
     {
-        await LoadRecipientsAsync();
+        await LoadOptionsAsync();
         RecipientEmail = RecipientOptions.FirstOrDefault(x => x.IsDefault)?.Email
             ?? RecipientOptions.FirstOrDefault()?.Email
             ?? configuration["Invoice:DefaultRecipientEmail"]
@@ -78,7 +83,7 @@ public sealed class CreateModel(
         PaymentType = PaymentType.Trim();
         Comments = string.IsNullOrWhiteSpace(Comments) ? null : Comments.Trim();
 
-        await LoadRecipientsAsync();
+        await LoadOptionsAsync();
         if (HasInvoiceRecipients)
         {
             if (!RecipientOptions.Any(x => string.Equals(x.Email, RecipientEmail, StringComparison.OrdinalIgnoreCase)))
@@ -88,6 +93,9 @@ public sealed class CreateModel(
         {
             ModelState.AddModelError(nameof(RecipientEmail), "Configure an invoice recipient before submitting an invoice.");
         }
+
+        if (!PaymentTypeOptions.Any(x => string.Equals(x.Name, PaymentType, StringComparison.OrdinalIgnoreCase)))
+            ModelState.AddModelError(nameof(PaymentType), "Select an active payment type.");
 
         if (Attachment is not null)
         {
@@ -106,11 +114,12 @@ public sealed class CreateModel(
             CurrencySymbol = CurrencySymbol,
             Amount = Amount,
             PaymentType = PaymentType,
-            Comments = Comments
+            Comments = Comments,
+            IsPlaceholder = IsPlaceholder
         };
 
         var result = await invoices.SubmitAsync(entry, Attachment, HttpContext.RequestAborted);
-        var savedMessage = Attachment is null ? "Invoice entry saved" : "Invoice entry and document saved";
+        var savedMessage = IsPlaceholder ? "Placeholder invoice entry saved" : "Invoice entry saved";
         TempData["Message"] = result.EmailSent
             ? $"{savedMessage} and email sent."
             : $"{savedMessage}, but email was not sent. Check the email configuration or the entry history.";
@@ -119,7 +128,7 @@ public sealed class CreateModel(
             : RedirectToPage("/Invoices/Create");
     }
 
-    private async Task LoadRecipientsAsync()
+    private async Task LoadOptionsAsync()
     {
         HasInvoiceRecipients = await db.InvoiceRecipients.AnyAsync();
         RecipientOptions = await db.InvoiceRecipients
@@ -127,6 +136,10 @@ public sealed class CreateModel(
             .OrderByDescending(x => x.IsDefault)
             .ThenBy(x => x.Name)
             .ThenBy(x => x.Email)
+            .ToListAsync();
+        PaymentTypeOptions = await db.PaymentTypeOptions
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Name)
             .ToListAsync();
     }
 }

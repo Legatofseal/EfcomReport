@@ -62,6 +62,14 @@ public static class PortalDatabaseInitializer
             );
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_InvoiceRecipients_Email"
             ON "InvoiceRecipients" ("Email");
+            CREATE TABLE IF NOT EXISTS "PaymentTypeOptions" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_PaymentTypeOptions" PRIMARY KEY AUTOINCREMENT,
+                "Name" TEXT NOT NULL,
+                "IsActive" INTEGER NOT NULL,
+                "CreatedAtUtc" TEXT NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_PaymentTypeOptions_Name"
+            ON "PaymentTypeOptions" ("Name");
             """);
 
         var configuredDefault = (scope.ServiceProvider.GetRequiredService<IConfiguration>()[
@@ -79,13 +87,16 @@ public static class PortalDatabaseInitializer
             db.SaveChanges();
         }
 
-        EnsureSqliteColumn(db, "AttachmentOriginalName", "TEXT NULL");
-        EnsureSqliteColumn(db, "AttachmentStorageName", "TEXT NULL");
-        EnsureSqliteColumn(db, "AttachmentContentType", "TEXT NULL");
-        EnsureSqliteColumn(db, "AttachmentSize", "INTEGER NULL");
+        EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentOriginalName", "TEXT NULL");
+        EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentStorageName", "TEXT NULL");
+        EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentContentType", "TEXT NULL");
+        EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentSize", "INTEGER NULL");
+        EnsureSqliteColumn(db, "MonthlySubmissions", "IsConfirmed", "INTEGER NOT NULL DEFAULT 0");
+        EnsureSqliteColumn(db, "MonthlySubmissions", "ConfirmedAtUtc", "TEXT NULL");
+        EnsureSqliteColumn(db, "InvoiceEntries", "IsPlaceholder", "INTEGER NOT NULL DEFAULT 0");
     }
 
-    private static void EnsureSqliteColumn(AppDbContext db, string column, string definition)
+    private static void EnsureSqliteColumn(AppDbContext db, string table, string column, string definition)
     {
         var connection = db.Database.GetDbConnection();
         var wasOpen = connection.State == ConnectionState.Open;
@@ -93,12 +104,12 @@ public static class PortalDatabaseInitializer
         try
         {
             using var command = connection.CreateCommand();
-            command.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('AbsenceRequests') WHERE name = '{column}'";
+            command.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = '{column}'";
             var exists = Convert.ToInt32(command.ExecuteScalar()) > 0;
             if (!exists)
             {
                 using var alter = connection.CreateCommand();
-                alter.CommandText = $"ALTER TABLE \"AbsenceRequests\" ADD COLUMN \"{column}\" {definition}";
+                alter.CommandText = $"ALTER TABLE \"{table}\" ADD COLUMN \"{column}\" {definition}";
                 alter.ExecuteNonQuery();
             }
         }

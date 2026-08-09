@@ -59,6 +59,8 @@ public sealed class MonthlySubmission
     public int Month { get; set; }
     public bool HasAbsence { get; set; }
     public DateTime SubmittedAtUtc { get; set; } = DateTime.UtcNow;
+    public bool IsConfirmed { get; set; }
+    public DateTime? ConfirmedAtUtc { get; set; }
 }
 
 public sealed class WorkdayOverride
@@ -85,6 +87,14 @@ public sealed class InvoiceRecipient
     public string Email { get; set; } = "";
     public bool IsActive { get; set; } = true;
     public bool IsDefault { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
+public sealed class PaymentTypeOption
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
@@ -119,6 +129,7 @@ public sealed class InvoiceEntry
     public decimal Amount { get; set; }
     public string PaymentType { get; set; } = "";
     public string? Comments { get; set; }
+    public bool IsPlaceholder { get; set; }
     public string? AttachmentOriginalName { get; set; }
     public string? AttachmentStorageName { get; set; }
     public string? AttachmentContentType { get; set; }

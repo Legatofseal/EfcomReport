@@ -62,7 +62,7 @@
 {
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h2 class="h4 mb-0">@T.Get(Context, "Report period"): @T.MonthName(Context, Model.Report.StartMonth) @Model.Report.StartYear – @T.MonthName(Context, Model.Report.EndMonth) @Model.Report.EndYear</h2>
-        <a class="btn btn-outline-secondary" href="@Model.CsvUrl">@T.Get(Context, "Download CSV")</a>
+        <a class="btn btn-outline-secondary" href="@Model.CsvUrl">@T.Get(Context, "Download report package")</a>
     </div>
 
     <form method="post" asp-page-handler="Send" class="card mb-3">
@@ -103,7 +103,7 @@
             <tbody>
                 @foreach (var row in Model.Report.Rows)
                 {
-                    var hasMissingSubmission = row.SubmissionStatuses.Any(x => x.State == "Did not submit this month");
+                    var hasMissingSubmission = row.SubmissionStatuses.Any(x => x.State == "Not confirmed");
                     <tr class="@(hasMissingSubmission ? "table-danger" : "")">
                         <td>@row.EmployeeName</td>
                         @foreach (var type in Model.Report.Types)
@@ -115,8 +115,29 @@
                         <td>
                             @foreach (var status in row.SubmissionStatuses)
                             {
-                                <div class="@(status.State == "Did not submit this month" ? "text-danger fw-semibold" : "")">
+                                <div class="@(status.State == "Not confirmed" ? "text-danger fw-semibold" : "")">
                                     @(Model.Report.IsSingleMonth ? "" : $"{T.MonthName(Context, status.Month)} {status.Year}: ")@T.Get(Context, status.State)
+                                    @if (status.ConfirmedAtUtc is not null)
+                                    {
+                                        <span class="text-muted small">(@status.ConfirmedAtUtc.Value.ToLocalTime().ToString("yyyy-MM-dd HH:mm"))</span>
+                                    }
+                                    @if (status.State == "Not confirmed")
+                                    {
+                                        <form method="post" asp-page-handler="Remind" class="d-inline ms-2">
+                                            <input type="hidden" name="employeeId" value="@row.EmployeeId" />
+                                            <input type="hidden" name="year" value="@status.Year" />
+                                            <input type="hidden" name="month" value="@status.Month" />
+                                            <input type="hidden" name="startYear" value="@Model.Report.StartYear" />
+                                            <input type="hidden" name="startMonth" value="@Model.Report.StartMonth" />
+                                            <input type="hidden" name="endYear" value="@Model.Report.EndYear" />
+                                            <input type="hidden" name="endMonth" value="@Model.Report.EndMonth" />
+                                            @foreach (var selectedEmployeeId in Model.SelectedEmployeeIds)
+                                            {
+                                                <input type="hidden" name="employeeIds" value="@selectedEmployeeId" />
+                                            }
+                                            <button class="btn btn-sm btn-outline-danger" type="submit">@T.Get(Context, "Remind")</button>
+                                        </form>
+                                    }
                                 </div>
                             }
                         </td>

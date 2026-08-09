@@ -25,6 +25,7 @@ else
                     <th>@T.Get(Context, "Invoice number")</th>
                     <th>@T.Get(Context, "Amount")</th>
                     <th>@T.Get(Context, "Payment type")</th>
+                    <th>@T.Get(Context, "Kind")</th>
                     @if (Model.IsAdmin) { <th>@T.Get(Context, "Submitted by")</th> }
                     <th>@T.Get(Context, "Email")</th>
                     <th>@T.Get(Context, "Document")</th>
@@ -39,6 +40,16 @@ else
                     <td>@entry.InvoiceNumber</td>
                     <td>@entry.CurrencySymbol@entry.Amount.ToString("0.##")</td>
                     <td>@entry.PaymentType</td>
+                    <td>
+                        @if (entry.IsPlaceholder)
+                        {
+                            <span class="badge text-bg-info">@T.Get(Context, "Placeholder")</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">@T.Get(Context, "Invoice")</span>
+                        }
+                    </td>
                     @if (Model.IsAdmin) { <td>@entry.SubmittedByEmail</td> }
                     <td>
                         @if (entry.EmailSentAtUtc.HasValue)
@@ -54,6 +65,10 @@ else
                         @if (entry.AttachmentOriginalName is not null)
                         {
                             <a asp-page="/Invoices/Attachment" asp-route-id="@entry.Id">@T.Get(Context, "Download")</a>
+                        }
+                        else
+                        {
+                            <span class="text-muted small">@T.Get(Context, "Sent by email only")</span>
                         }
                     </td>
                 </tr>

@@ -181,6 +181,28 @@ public sealed class SubmissionService(AppDbContext db)
         }
         row.HasAbsence = hasAbsence;
         row.SubmittedAtUtc = DateTime.UtcNow;
+        row.IsConfirmed = false;
+        row.ConfirmedAtUtc = null;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task ConfirmAsync(int employeeId, int year, int month)
+    {
+        var start = new DateTime(year, month, 1);
+        var end = start.AddMonths(1).AddDays(-1);
+        var row = await db.MonthlySubmissions.SingleOrDefaultAsync(x =>
+            x.EmployeeId == employeeId && x.Year == year && x.Month == month);
+        if (row is null)
+        {
+            row = new MonthlySubmission { EmployeeId = employeeId, Year = year, Month = month };
+            db.MonthlySubmissions.Add(row);
+        }
+
+        row.HasAbsence = await db.AbsenceRequests.AnyAsync(x =>
+            x.EmployeeId == employeeId && !x.IsCancelled && x.StartDate <= end && x.EndDate >= start);
+        row.SubmittedAtUtc = DateTime.UtcNow;
+        row.IsConfirmed = true;
+        row.ConfirmedAtUtc = DateTime.UtcNow;
         await db.SaveChangesAsync();
     }
 
@@ -193,6 +215,31 @@ public sealed class SubmissionService(AppDbContext db)
             await MarkAsync(employeeId, cursor.Year, cursor.Month, true);
             cursor = cursor.AddMonths(1);
         }
+    }
+
+    public async Task RefreshRangeAsync(int employeeId, DateTime start, DateTime end)
+    {
+        var cursor = new DateTime(start.Year, start.Month, 1);
+        var last = new DateTime(end.Year, end.Month, 1);
+        while (cursor <= last)
+        {
+            var monthEnd = cursor.AddMonths(1).AddDays(-1);
+            var row = await db.MonthlySubmissions.SingleOrDefaultAsync(x =>
+                x.EmployeeId == employeeId && x.Year == cursor.Year && x.Month == cursor.Month);
+            if (row is null)
+            {
+                row = new MonthlySubmission { EmployeeId = employeeId, Year = cursor.Year, Month = cursor.Month };
+                db.MonthlySubmissions.Add(row);
+            }
+
+            row.HasAbsence = await db.AbsenceRequests.AnyAsync(x =>
+                x.EmployeeId == employeeId && !x.IsCancelled && x.StartDate <= monthEnd && x.EndDate >= cursor);
+            row.SubmittedAtUtc = DateTime.UtcNow;
+            row.IsConfirmed = false;
+            row.ConfirmedAtUtc = null;
+            cursor = cursor.AddMonths(1);
+        }
+        await db.SaveChangesAsync();
     }
 }
 
@@ -228,7 +275,7 @@ public sealed class ReportService(AppDbContext db, WorkCalendarService calendar)
             .Where(x => !x.IsCancelled && reportEmployeeIds.Contains(x.EmployeeId) && x.StartDate <= rangeEnd && x.EndDate >= rangeStart)
             .ToListAsync();
 
-        var rows = employees.ToDictionary(x => x.Id, x => new ReportRow(x.Name));
+        var rows = employees.ToDictionary(x => x.Id, x => new ReportRow(x.Id, x.Name));
         foreach (var request in requests)
         {
             if (!rows.TryGetValue(request.EmployeeId, out var row)) continue;
@@ -257,12 +304,12 @@ public sealed class ReportService(AppDbContext db, WorkCalendarService calendar)
             row.TotalDays = row.DaySets.Values.SelectMany(x => x).Distinct().Count();
             foreach (var period in periods)
             {
+                var hasSubmission = submissionLookup.TryGetValue((rowPair.Key, period.Year, period.Month), out var submission);
                 row.SubmissionStatuses.Add(new ReportSubmissionStatus(
                     period.Year,
                     period.Month,
-                    submissionLookup.TryGetValue((rowPair.Key, period.Year, period.Month), out var submission)
-                        ? (submission.HasAbsence ? "Absences submitted" : "No absence")
-                        : "Did not submit this month"));
+                    hasSubmission && submission!.IsConfirmed ? "Confirmed" : "Not confirmed",
+                    hasSubmission ? submission!.ConfirmedAtUtc : null));
             }
         }
 
@@ -272,7 +319,7 @@ public sealed class ReportService(AppDbContext db, WorkCalendarService calendar)
 
 public sealed record ReportPeriod(int Year, int Month);
 
-public sealed record ReportSubmissionStatus(int Year, int Month, string State);
+public sealed record ReportSubmissionStatus(int Year, int Month, string State, DateTime? ConfirmedAtUtc);
 
 public sealed class ReportView(int startYear, int startMonth, int endYear, int endMonth, IReadOnlyList<ReportPeriod> periods, IReadOnlyList<LeaveType> types, IReadOnlyList<ReportRow> rows)
 {
@@ -291,8 +338,9 @@ public sealed class ReportView(int startYear, int startMonth, int endYear, int e
         : $"{StartYear}-{StartMonth:00} to {EndYear}-{EndMonth:00}";
 }
 
-public sealed class ReportRow(string employeeName)
+public sealed class ReportRow(int employeeId, string employeeName)
 {
+    public int EmployeeId { get; } = employeeId;
     public string EmployeeName { get; } = employeeName;
     public Dictionary<string, int> DaysByType { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, int> EntryCounts { get; } = new(StringComparer.OrdinalIgnoreCase);
@@ -348,22 +396,48 @@ public sealed class ReminderService(AppDbContext db, EmailService email, IConfig
         if (!force && await db.ReminderRuns.AnyAsync(x => x.Year == now.Year && x.Month == now.Month)) return 0;
 
         var employees = await db.Employees.Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
-        var submitted = await db.MonthlySubmissions.Where(x => x.Year == now.Year && x.Month == now.Month).Select(x => x.EmployeeId).ToListAsync();
-        var missing = employees.Where(x => !submitted.Contains(x.Id)).ToList();
+        var submissions = await db.MonthlySubmissions
+            .Where(x => x.Year == now.Year && x.Month == now.Month)
+            .ToDictionaryAsync(x => x.EmployeeId);
+        var missing = employees.Where(x => !submissions.TryGetValue(x.Id, out var submission) || !submission.IsConfirmed).ToList();
         if (missing.Count == 0)
         {
             if (!force) { db.ReminderRuns.Add(new ReminderRun { Year = now.Year, Month = now.Month }); await db.SaveChangesAsync(); }
             return 0;
         }
         if (!email.IsConfigured) throw new InvalidOperationException("Email is not configured for reminders.");
-        var publicUrl = (configuration["App:PublicUrl"] ?? "http://localhost:5186").TrimEnd('/');
-        var link = $"{publicUrl}/?month={now.Month}&year={now.Year}";
         foreach (var employee in missing)
-            await email.SendAsync([employee.Email], "Monthly leave submission reminder", $"Hello {employee.Name},\n\nPlease submit your absence information for {now:MMMM yyyy}, or confirm that there was no absence.\n\nOpen the leave tracker: {link}");
+            await SendReminderAsync(employee, now.Year, now.Month);
         db.ReminderRuns.Add(new ReminderRun { Year = now.Year, Month = now.Month });
         await db.SaveChangesAsync();
         logger.LogInformation("Sent {Count} monthly reminders", missing.Count);
         return missing.Count;
+    }
+
+    public async Task<bool> SendIndividualAsync(int employeeId, int year, int month)
+    {
+        if (year is < 2020 or > 2100 || month is < 1 or > 12)
+            throw new InvalidOperationException("Select a valid month and year.");
+
+        var employee = await db.Employees.SingleOrDefaultAsync(x => x.Id == employeeId && x.IsActive);
+        if (employee is null) throw new InvalidOperationException("The employee is not active.");
+        var submission = await db.MonthlySubmissions.SingleOrDefaultAsync(x =>
+            x.EmployeeId == employeeId && x.Year == year && x.Month == month);
+        if (submission?.IsConfirmed == true) return false;
+
+        await SendReminderAsync(employee, year, month);
+        return true;
+    }
+
+    private async Task SendReminderAsync(Employee employee, int year, int month)
+    {
+        if (!email.IsConfigured) throw new InvalidOperationException("Email is not configured for reminders.");
+        var publicUrl = (configuration["App:PublicUrl"] ?? "http://localhost:5186").TrimEnd('/');
+        var link = $"{publicUrl}/?month={month}&year={year}";
+        await email.SendAsync(
+            [employee.Email],
+            "Monthly leave report confirmation reminder",
+            $"Hello {employee.Name},\n\nPlease fill in your absence information for {year}-{month:00} and confirm the monthly report.\n\nOpen the leave tracker: {link}");
     }
 }
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text;
 using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 
@@ -7,6 +8,13 @@ namespace EfcomReport.Services;
 public sealed class UiText
 {
     public const string LanguageCookieName = "efcom-language";
+    private static readonly Encoding Windows1252 = CreateWindows1252();
+
+    private static Encoding CreateWindows1252()
+    {
+        Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
+        return Encoding.GetEncoding(1252);
+    }
 
     private static readonly IReadOnlyDictionary<string, string> Hebrew = new Dictionary<string, string>(StringComparer.Ordinal)
     {
@@ -57,14 +65,36 @@ public sealed class UiText
         ["Missing submissions are highlighted and selected by default."] = "\u05D3\u05D9\u05D5\u05D5\u05D7\u05D9\u05DD \u05D7\u05E1\u05E8\u05D9\u05DD \u05DE\u05D5\u05D3\u05D2\u05E9\u05D9\u05DD \u05D5\u05E0\u05D1\u05D7\u05E8\u05D9\u05DD \u05D1\u05E8\u05D9\u05E8\u05EA \u05DE\u05D7\u05D3\u05DC.", ["Request reports from selected employees"] = "\u05D1\u05E7\u05E9 \u05D3\u05D9\u05D5\u05D5\u05D7\u05D9\u05DD \u05DE\u05D4\u05E2\u05D5\u05D1\u05D3\u05D9\u05DD \u05E9\u05E0\u05D1\u05D7\u05E8\u05D5", ["Email selected employees and ask for a monthly submission."] = "\u05E9\u05DC\u05D7 \u05DC\u05E2\u05D5\u05D1\u05D3\u05D9\u05DD \u05E9\u05E0\u05D1\u05D7\u05E8\u05D5 \u05D1\u05E7\u05E9\u05D4 \u05DC\u05D3\u05D9\u05D5\u05D5\u05D7 \u05D7\u05D5\u05D3\u05E9\u05D9.", ["No employees selected."] = "\u05DC\u05D0 \u05E0\u05D1\u05D7\u05E8\u05D5 \u05E2\u05D5\u05D1\u05D3\u05D9\u05DD"
     };
 
+    private static readonly IReadOnlyDictionary<string, string> NewHebrew = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Confirmed"] = "\\u05D0\\u05D5\\u05E9\\u05E8", ["Not confirmed"] = "\\u05DC\\u05D0 \\u05D0\\u05D5\\u05E9\\u05E8", ["Confirm monthly report"] = "\\u05D0\\u05E9\\u05E8 \\u05D3\\u05D9\\u05D5\\u05D5\\u05D7 \\u05D7\\u05D5\\u05D3\\u05E9\\u05D9", ["Download report package"] = "\\u05D4\\u05D5\\u05E8\\u05D3 \\u05D7\\u05D1\\u05D9\\u05DC\\u05EA \\u05D3\\u05D5\\u05D7", ["Remind"] = "\\u05D4\\u05D6\\u05DB\\u05E8",
+        ["Payment types"] = "\\u05E1\\u05D5\\u05D2\\u05D9 \\u05EA\\u05E9\\u05DC\\u05D5\\u05DD", ["Manage the payment types available when submitting an invoice."] = "\\u05E0\\u05D4\\u05DC \\u05E1\\u05D5\\u05D2\\u05D9 \\u05EA\\u05E9\\u05DC\\u05D5\\u05DD \\u05D6\\u05DE\\u05D9\\u05E0\\u05D9\\u05DD \\u05D1\\u05D4\\u05D2\\u05E9\\u05EA \\u05D7\\u05E9\\u05D1\\u05D5\\u05E0\\u05D9\\u05EA.", ["Add payment type"] = "\\u05D4\\u05D5\\u05E1\\u05E3 \\u05E1\\u05D5\\u05D2 \\u05EA\\u05E9\\u05DC\\u05D5\\u05DD", ["Configured payment types"] = "\\u05E1\\u05D5\\u05D2\\u05D9 \\u05EA\\u05E9\\u05DC\\u05D5\\u05DD \\u05DE\\u05D5\\u05D2\\u05D3\\u05E8\\u05D9\\u05DD", ["No payment types configured yet."] = "\\u05E2\\u05D3\\u05D9\\u05D9\\u05DF \\u05DC\\u05D0 \\u05D4\\u05D5\\u05D2\\u05D3\\u05E8\\u05D5 \\u05E1\\u05D5\\u05D2\\u05D9 \\u05EA\\u05E9\\u05DC\\u05D5\\u05DD.",
+        ["Select payment type"] = "\\u05D1\\u05D7\\u05E8 \\u05E1\\u05D5\\u05D2 \\u05EA\\u05E9\\u05DC\\u05D5\\u05DD", ["No active payment types are configured. Ask an administrator to add one."] = "\\u05DC\\u05D0 \\u05D4\\u05D5\\u05D2\\u05D3\\u05E8\\u05D5 \\u05E1\\u05D5\\u05D2\\u05D9 \\u05EA\\u05E9\\u05DC\\u05D5\\u05DD \\u05E4\\u05E2\\u05D9\\u05DC\\u05D9\\u05DD.", ["Placeholder - not a real invoice"] = "\\u05DE\\u05D9\\u05D5\\u05E6\\u05D2 \\u05DC\\u05D0 \\u05D7\\u05E9\\u05D1\\u05D5\\u05E0\\u05D9\\u05EA \\u05D0\\u05DE\\u05D9\\u05EA\\u05D9\\u05EA", ["Placeholder"] = "\\u05DE\\u05D9\\u05D5\\u05E6\\u05D2", ["Kind"] = "\\u05E1\\u05D5\\u05D2", ["Invoice"] = "\\u05D7\\u05E9\\u05D1\\u05D5\\u05E0\\u05D9\\u05EA", ["Sent by email only"] = "\\u05E0\\u05E9\\u05DC\\u05D7 \\u05D1\\u05D3\\u05D5\\u05D0\\u05E8 \\u05D1\\u05DC\\u05D1\\u05D3"
+    };
+
     public string Language(IHttpContextAccessor context) => Normalize(context.HttpContext?.Request.Cookies[LanguageCookieName]);
     public string Direction(IHttpContextAccessor context) => Language(context) == "he" ? "rtl" : "ltr";
     public string Get(IHttpContextAccessor context, string value)
     {
         if (Language(context) != "he") return value;
-        if (!Hebrew.TryGetValue(value, out var translation) && !AdditionalHebrew.TryGetValue(value, out translation))
+        if (!Hebrew.TryGetValue(value, out var translation) && !AdditionalHebrew.TryGetValue(value, out translation) && !NewHebrew.TryGetValue(value, out translation))
             return value;
-        return DecodeUnicodeEscapes(translation);
+        return DecodeTranslation(translation);
+    }
+
+    private static string DecodeTranslation(string value)
+    {
+        var decoded = DecodeUnicodeEscapes(value);
+        if (!decoded.Contains('×') && !decoded.Contains('â') && !decoded.Contains('ð')) return decoded;
+        try
+        {
+            var repaired = Encoding.UTF8.GetString(Windows1252.GetBytes(decoded));
+            return repaired.Contains('\uFFFD') ? decoded : repaired;
+        }
+        catch (DecoderFallbackException)
+        {
+            return decoded;
+        }
     }
 
     private static string DecodeUnicodeEscapes(string value) =>
@@ -75,6 +105,8 @@ public sealed class UiText
     public string MonthName(IHttpContextAccessor context, int month)
     {
         if (month is < 1 or > 12) return month.ToString(CultureInfo.InvariantCulture);
+        if (Language(context) == "he")
+            return new[] { "\u05D9\u05E0\u05D5\u05D0\u05E8", "\u05E4\u05D1\u05E8\u05D5\u05D0\u05E8", "\u05DE\u05E8\u05E5", "\u05D0\u05E4\u05E8\u05D9\u05DC", "\u05DE\u05D0\u05D9", "\u05D9\u05D5\u05E0\u05D9", "\u05D9\u05D5\u05DC\u05D9", "\u05D0\u05D5\u05D2\u05D5\u05E1\u05D8", "\u05E1\u05E4\u05D8\u05DE\u05D1\u05E8", "\u05D0\u05D5\u05E7\u05D8\u05D5\u05D1\u05E8", "\u05E0\u05D5\u05D1\u05DE\u05D1\u05E8", "\u05D3\u05E6\u05DE\u05D1\u05E8" }[month - 1];
         if (Language(context) == "he") return new[] { "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר" }[month - 1];
         return CultureInfo.GetCultureInfo("en-US").DateTimeFormat.GetMonthName(month);
     }
