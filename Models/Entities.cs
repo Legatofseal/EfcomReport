@@ -101,6 +101,14 @@ public sealed class PaymentTypeOption
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 }
 
+public sealed class InvoiceCustomerOption
+{
+    public int Id { get; set; }
+    public string Name { get; set; } = "";
+    public bool IsActive { get; set; } = true;
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+}
+
 public sealed class ReminderRun
 {
     public int Id { get; set; }

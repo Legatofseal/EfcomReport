@@ -41,7 +41,6 @@
         {
             <div class="sidebar-heading">@T.Get(Context, "Tracker")</div>
             <a class="sidebar-link" asp-page="/Index">@T.Get(Context, "My tracker")</a>
-            <a class="sidebar-link" asp-page="/Calendar">@T.Get(Context, "Work calendar")</a>
 
             <div class="sidebar-heading mt-4">@T.Get(Context, "Invoices")</div>
             @if (User.IsInRole("Admin"))
@@ -54,8 +53,9 @@
             {
                 <div class="sidebar-heading mt-4">@T.Get(Context, "Administration")</div>
                 <a class="sidebar-link" asp-page="/Admin/Index">@T.Get(Context, "Administration")</a>
+                <a class="sidebar-link" asp-page="/Admin/Calendar">@T.Get(Context, "Work calendar")</a>
                 <a class="sidebar-link" asp-page="/Admin/InvoiceRecipients">@T.Get(Context, "Invoice recipients")</a>
-                <a class="sidebar-link" asp-page="/Admin/PaymentTypes">@T.Get(Context, "Payment types")</a>
+                <a class="sidebar-link" asp-page="/Admin/InvoiceCustomers">@T.Get(Context, "Invoice customers")</a>
             }
         }
     </aside>

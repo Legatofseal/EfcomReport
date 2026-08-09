@@ -62,6 +62,14 @@ public static class PortalDatabaseInitializer
             );
             CREATE UNIQUE INDEX IF NOT EXISTS "IX_InvoiceRecipients_Email"
             ON "InvoiceRecipients" ("Email");
+            CREATE TABLE IF NOT EXISTS "InvoiceCustomerOptions" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_InvoiceCustomerOptions" PRIMARY KEY AUTOINCREMENT,
+                "Name" TEXT NOT NULL,
+                "IsActive" INTEGER NOT NULL,
+                "CreatedAtUtc" TEXT NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_InvoiceCustomerOptions_Name"
+            ON "InvoiceCustomerOptions" ("Name");
             CREATE TABLE IF NOT EXISTS "PaymentTypeOptions" (
                 "Id" INTEGER NOT NULL CONSTRAINT "PK_PaymentTypeOptions" PRIMARY KEY AUTOINCREMENT,
                 "Name" TEXT NOT NULL,
@@ -85,6 +93,24 @@ public static class PortalDatabaseInitializer
                 IsDefault = true
             });
             db.SaveChanges();
+        }
+
+        if (!db.InvoiceCustomerOptions.Any())
+        {
+            var existingCustomers = db.InvoiceEntries
+                .Select(x => x.Customer)
+                .Where(x => x != null && x != "")
+                .Distinct()
+                .ToList();
+            if (existingCustomers.Count > 0)
+            {
+                db.InvoiceCustomerOptions.AddRange(existingCustomers.Select(name => new InvoiceCustomerOption
+                {
+                    Name = name,
+                    IsActive = true
+                }));
+                db.SaveChanges();
+            }
         }
 
         EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentOriginalName", "TEXT NULL");

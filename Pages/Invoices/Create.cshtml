@@ -28,7 +28,21 @@
     </div>
     <div class="col-md-6">
         <label asp-for="Customer" class="form-label">@T.Get(Context, "Customer")</label>
-        <input asp-for="Customer" class="form-control" />
+        @if (Model.CustomerOptions.Count > 0)
+        {
+            <select asp-for="Customer" class="form-select">
+                <option value="">@T.Get(Context, "Select invoice customer")</option>
+                @foreach (var customer in Model.CustomerOptions)
+                {
+                    <option value="@customer.Name">@customer.Name</option>
+                }
+            </select>
+        }
+        else
+        {
+            <input asp-for="Customer" class="form-control" disabled />
+            <div class="form-text text-warning">@T.Get(Context, "No active invoice customers are configured. Ask an administrator to add one.")</div>
+        }
         <span asp-validation-for="Customer" class="text-danger"></span>
     </div>
     <div class="col-md-4">

@@ -1,0 +1,65 @@
+@page
+@model EfcomReport.Pages.Admin.InvoiceCustomersModel
+@{ ViewData["Title"] = T.Get(Context, "Invoice customers"); }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div>
+        <h1 class="mb-1">@T.Get(Context, "Invoice customers")</h1>
+        <p class="text-muted mb-0">@T.Get(Context, "Manage the customer list available when submitting an invoice.")</p>
+    </div>
+    <a class="btn btn-outline-secondary" asp-page="/Admin/Index">@T.Get(Context, "Administration")</a>
+</div>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card"><div class="card-body">
+            <h2 class="h5">@T.Get(Context, "Add invoice customer")</h2>
+            <form method="post" asp-page-handler="Add">
+                <label asp-for="CustomerName" class="form-label">@T.Get(Context, "Customer name")</label>
+                <input asp-for="CustomerName" class="form-control" />
+                <span asp-validation-for="CustomerName" class="text-danger small"></span>
+                <button class="btn btn-primary mt-3" type="submit">@T.Get(Context, "Add")</button>
+            </form>
+        </div></div>
+    </div>
+    <div class="col-lg-7">
+        <div class="card"><div class="card-body">
+            <h2 class="h5">@T.Get(Context, "Configured invoice customers")</h2>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead><tr><th>@T.Get(Context, "Name")</th><th>@T.Get(Context, "Status")</th><th></th></tr></thead>
+                    <tbody>
+                    @if (Model.Customers.Count == 0)
+                    {
+                        <tr><td colspan="3" class="text-muted">@T.Get(Context, "No invoice customers configured yet.")</td></tr>
+                    }
+                    else
+                    {
+                        @foreach (var customer in Model.Customers)
+                        {
+                            <tr>
+                                <td>@customer.Name</td>
+                                <td>@T.Get(Context, customer.IsActive ? "Active" : "Inactive")</td>
+                                <td class="text-end">
+                                    <form method="post" asp-page-handler="Toggle" class="d-inline">
+                                        <input type="hidden" name="id" value="@customer.Id" />
+                                        <button class="btn btn-sm btn-outline-secondary" type="submit">@T.Get(Context, "Toggle")</button>
+                                    </form>
+                                    <form method="post" asp-page-handler="Delete" class="d-inline" onsubmit="return confirm('@T.Get(Context, "Delete invoice customer?")');">
+                                        <input type="hidden" name="id" value="@customer.Id" />
+                                        <button class="btn btn-sm btn-outline-danger" type="submit">@T.Get(Context, "Delete")</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div></div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

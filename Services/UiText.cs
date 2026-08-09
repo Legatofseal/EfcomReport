@@ -79,6 +79,15 @@ public sealed class UiText
 
     private static readonly IReadOnlyDictionary<string, string> RussianAdditional = new Dictionary<string, string>(StringComparer.Ordinal)
     {
+        ["Invoice customers"] = "Клиенты инвойсов",
+        ["Manage the customer list available when submitting an invoice."] = "Управление списком клиентов, доступных при создании инвойса.",
+        ["Add invoice customer"] = "Добавить клиента инвойса",
+        ["Customer name"] = "Название клиента",
+        ["Configured invoice customers"] = "Настроенные клиенты инвойсов",
+        ["No invoice customers configured yet."] = "Клиенты инвойсов ещё не настроены.",
+        ["Delete invoice customer?"] = "Удалить этого клиента инвойсов? Старые записи инвойсов сохранятся.",
+        ["Select invoice customer"] = "Выберите клиента инвойса",
+        ["No active invoice customers are configured. Ask an administrator to add one."] = "Нет активных клиентов инвойсов. Попросите администратора добавить клиента.",
         ["Remove admin rights"] = "Убрать права администратора",
         ["Remove administrator rights?"] = "Убрать права администратора у этого пользователя? Сам пользователь останется активным.",
         ["Your Google account is not linked to an employee yet. Ask an administrator to add your email."] = "Ваш аккаунт Google ещё не связан с сотрудником. Попросите администратора добавить ваш адрес.",

@@ -17,6 +17,7 @@ public sealed class CreateModel(
     AppDbContext db) : PageModel
 {
     public List<InvoiceRecipient> RecipientOptions { get; private set; } = [];
+    public List<InvoiceCustomerOption> CustomerOptions { get; private set; } = [];
     public List<PaymentTypeOption> PaymentTypeOptions { get; private set; } = [];
     public bool HasInvoiceRecipients { get; private set; }
     public bool HasPaymentTypeOptions => PaymentTypeOptions.Count > 0;
@@ -94,6 +95,11 @@ public sealed class CreateModel(
             ModelState.AddModelError(nameof(RecipientEmail), "Configure an invoice recipient before submitting an invoice.");
         }
 
+        if (!CustomerOptions.Any(x => x.IsActive && string.Equals(x.Name, Customer, StringComparison.OrdinalIgnoreCase)))
+            ModelState.AddModelError(nameof(Customer), CustomerOptions.Count == 0
+                ? "Configure an invoice customer before submitting an invoice."
+                : "Select an active invoice customer.");
+
         if (!PaymentTypeOptions.Any(x => string.Equals(x.Name, PaymentType, StringComparison.OrdinalIgnoreCase)))
             ModelState.AddModelError(nameof(PaymentType), "Select an active payment type.");
 
@@ -136,6 +142,10 @@ public sealed class CreateModel(
             .OrderByDescending(x => x.IsDefault)
             .ThenBy(x => x.Name)
             .ThenBy(x => x.Email)
+            .ToListAsync();
+        CustomerOptions = await db.InvoiceCustomerOptions
+            .Where(x => x.IsActive)
+            .OrderBy(x => x.Name)
             .ToListAsync();
         PaymentTypeOptions = await db.PaymentTypeOptions
             .Where(x => x.IsActive)
