@@ -25,6 +25,7 @@ else
                     <th>@T.Get(Context, "Invoice number")</th>
                     <th>@T.Get(Context, "Amount")</th>
                     <th>@T.Get(Context, "Payment type")</th>
+                    <th>@T.Get(Context, "Comments")</th>
                     <th>@T.Get(Context, "Kind")</th>
                     @if (Model.IsAdmin) { <th>@T.Get(Context, "Submitted by")</th> }
                     <th>@T.Get(Context, "Email")</th>
@@ -41,6 +42,7 @@ else
                     <td>@entry.InvoiceNumber</td>
                     <td>@entry.CurrencySymbol@entry.Amount.ToString("0.##")</td>
                     <td>@entry.PaymentType</td>
+                    <td>@(string.IsNullOrWhiteSpace(entry.Comments) ? "—" : entry.Comments)</td>
                     <td>
                         @if (entry.IsPlaceholder)
                         {
