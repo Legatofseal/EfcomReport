@@ -107,8 +107,7 @@ public sealed class InvoiceService(
     public static string BuildSubject(InvoiceEntry entry)
     {
         var amount = entry.Amount.ToString("0.00", CultureInfo.InvariantCulture);
-        var marker = entry.IsPlaceholder ? "EFCOM_INVOICE_PLACEHOLDER" : "EFCOM_INVOICE";
-        return $"{marker},[{Clean(entry.Customer)}],[{Clean(entry.InvoiceNumber)}],[{Clean(entry.CurrencySymbol)}{amount}],[{Clean(entry.PaymentType)}],[{Clean(entry.Comments)}]";
+        return $"EFCOM_INVOICE,[{Clean(entry.Customer)}],[{Clean(entry.InvoiceNumber)}],[{amount}],[{Clean(entry.PaymentType)}],[{Clean(entry.Comments)}]";
     }
 
     public static string BuildBody(InvoiceEntry entry, bool attachmentIncluded = false)
