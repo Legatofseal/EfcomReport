@@ -5,9 +5,9 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <div><h1>@T.Get(Context, "My leave tracker")</h1><p class="text-muted mb-0">@T.MonthName(Context, Model.CurrentMonth) @Model.CurrentYear</p></div>
     <form method="get" class="d-flex gap-2 align-items-end">
-        <label>@T.Get(Context, "Month") <select class="form-select" name="month">@for (var month = 1; month <= 12; month++) { <option value="@month" selected="@(Model.CurrentMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option> }</select></label>
-        <label>@T.Get(Context, "Year") <input class="form-control" type="number" name="year" min="2020" max="2100" value="@Model.CurrentYear" /></label>
-        <button class="btn btn-outline-primary" type="submit">@T.Get(Context, "Open")</button>
+        <label>@T.Get(Context, "Month") <select class="form-select" name="month" onchange="this.form.submit()">@for (var month = 1; month <= 12; month++) { <option value="@month" selected="@(Model.CurrentMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option> }</select></label>
+        <label>@T.Get(Context, "Year") <input class="form-control" type="number" name="year" min="2020" max="2100" value="@Model.CurrentYear" onchange="this.form.submit()" /></label>
+        <noscript><button class="btn btn-outline-primary" type="submit">@T.Get(Context, "Open")</button></noscript>
     </form>
 </div>
 
