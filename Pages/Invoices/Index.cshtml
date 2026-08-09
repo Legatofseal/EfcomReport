@@ -29,6 +29,7 @@ else
                     @if (Model.IsAdmin) { <th>@T.Get(Context, "Submitted by")</th> }
                     <th>@T.Get(Context, "Email")</th>
                     <th>@T.Get(Context, "Document")</th>
+                    <th></th>
                 </tr>
             </thead>
             <tbody>
@@ -69,6 +70,16 @@ else
                         else
                         {
                             <span class="text-muted small">@T.Get(Context, "Sent by email only")</span>
+                        }
+                    </td>
+                    <td>
+                        @if (!entry.EmailSentAtUtc.HasValue)
+                        {
+                            <form method="post" asp-page-handler="Resend" onsubmit="return confirm('@T.Get(Context, "Resend invoice email?")');">
+                                <input type="hidden" name="id" value="@entry.Id" />
+                                <button class="btn btn-sm btn-outline-primary" type="submit">@T.Get(Context, "Resend")</button>
+                            </form>
+                            <div class="text-muted small mt-1">@T.Get(Context, "Document is not stored; resend includes only invoice data.")</div>
                         }
                     </td>
                 </tr>

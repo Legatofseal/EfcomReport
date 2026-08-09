@@ -79,6 +79,9 @@ public sealed class UiText
 
     private static readonly IReadOnlyDictionary<string, string> RussianAdditional = new Dictionary<string, string>(StringComparer.Ordinal)
     {
+        ["Resend"] = "Отправить повторно",
+        ["Resend invoice email?"] = "Повторно отправить email инвойса?",
+        ["Document is not stored; resend includes only invoice data."] = "Документ не хранится; повторно отправятся только данные инвойса.",
         ["Invoice customers"] = "Клиенты инвойсов",
         ["Manage the customer list available when submitting an invoice."] = "Управление списком клиентов, доступных при создании инвойса.",
         ["Add invoice customer"] = "Добавить клиента инвойса",

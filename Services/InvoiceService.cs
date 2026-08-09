@@ -9,7 +9,8 @@ public sealed record InvoiceSubmissionResult(bool EmailSent);
 public sealed class InvoiceService(
     AppDbContext db,
     EmailService email,
-    ILogger<InvoiceService> logger)
+    ILogger<InvoiceService> logger,
+    AttachmentService attachments)
 {
     public async Task<InvoiceSubmissionResult> SubmitAsync(
         InvoiceEntry entry,
@@ -43,7 +44,7 @@ public sealed class InvoiceService(
             await email.SendDocumentAsync(
                 [entry.RecipientEmail],
                 BuildSubject(entry),
-                BuildBody(entry),
+                BuildBody(entry, attachmentBytes is not null),
                 attachmentBytes,
                 attachmentName,
                 attachmentContentType);
@@ -63,6 +64,46 @@ public sealed class InvoiceService(
         }
     }
 
+    public async Task<InvoiceSubmissionResult> ResendAsync(
+        InvoiceEntry entry,
+        CancellationToken cancellationToken = default)
+    {
+        byte[]? attachmentBytes = null;
+        string? attachmentName = null;
+        string? attachmentContentType = null;
+        var path = attachments.GetInvoicePath(entry.AttachmentStorageName);
+        if (path is not null && File.Exists(path))
+        {
+            attachmentBytes = await File.ReadAllBytesAsync(path, cancellationToken);
+            attachmentName = Path.GetFileName(entry.AttachmentOriginalName ?? "invoice-document");
+            attachmentContentType = entry.AttachmentContentType ?? ContentTypeFor(Path.GetExtension(attachmentName));
+        }
+
+        try
+        {
+            await email.SendDocumentAsync(
+                [entry.RecipientEmail],
+                BuildSubject(entry),
+                BuildBody(entry, attachmentBytes is not null),
+                attachmentBytes,
+                attachmentName,
+                attachmentContentType);
+
+            entry.EmailSentAtUtc = DateTime.UtcNow;
+            entry.EmailError = null;
+            await db.SaveChangesAsync(cancellationToken);
+            logger.LogInformation("Resent invoice entry {InvoiceEntryId} to {RecipientEmail}", entry.Id, entry.RecipientEmail);
+            return new InvoiceSubmissionResult(true);
+        }
+        catch (Exception ex)
+        {
+            entry.EmailError = ex.Message.Length <= 2000 ? ex.Message : ex.Message[..2000];
+            await db.SaveChangesAsync(cancellationToken);
+            logger.LogWarning(ex, "Retry for invoice entry {InvoiceEntryId} failed", entry.Id);
+            return new InvoiceSubmissionResult(false);
+        }
+    }
+
     public static string BuildSubject(InvoiceEntry entry)
     {
         var amount = entry.Amount.ToString("0.00", CultureInfo.InvariantCulture);
@@ -70,9 +111,11 @@ public sealed class InvoiceService(
         return $"{marker},[{Clean(entry.Customer)}],[{Clean(entry.InvoiceNumber)}],[{Clean(entry.CurrencySymbol)}{amount}],[{Clean(entry.PaymentType)}],[{Clean(entry.Comments)}]";
     }
 
-    public static string BuildBody(InvoiceEntry entry)
+    public static string BuildBody(InvoiceEntry entry, bool attachmentIncluded = false)
     {
-        var attachment = "Attached to this email only; it is not stored in the portal.";
+        var attachment = attachmentIncluded
+            ? "Attached to this email only; it is not stored in the portal."
+            : "The invoice document is not stored in the portal; only the invoice data is included.";
         return $"New Accounting Entry\n\n" +
                $"Placeholder: {(entry.IsPlaceholder ? "Yes" : "No")}\n" +
                $"Customer: {entry.Customer}\n" +
