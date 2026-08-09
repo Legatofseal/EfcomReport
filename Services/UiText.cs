@@ -42,9 +42,16 @@ public sealed class UiText
         ["Error."] = "שגיאה.", ["An error occurred while processing your request."] = "אירעה שגיאה בעת עיבוד הבקשה.", ["Privacy Policy"] = "מדיניות פרטיות", ["Use this page to detail your site's privacy policy."] = "השתמש בדף זה כדי לפרט את מדיניות הפרטיות."
     };
 
+    private static readonly IReadOnlyDictionary<string, string> AdditionalHebrew = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Start month"] = "\u05D7\u05D5\u05D3\u05E9 \u05D4\u05EA\u05D7\u05DC\u05D4", ["Start year"] = "\u05E9\u05E0\u05EA \u05D4\u05EA\u05D7\u05DC\u05D4", ["End month"] = "\u05D7\u05D5\u05D3\u05E9 \u05E1\u05D9\u05D5\u05DD", ["End year"] = "\u05E9\u05E0\u05EA \u05E1\u05D9\u05D5\u05DD",
+        ["Apply filters"] = "\u05D4\u05D7\u05DC \u05DE\u05E1\u05E0\u05E0\u05D9\u05DD", ["By default, all active employees are included."] = "\u05DB\u05D1\u05E8\u05D9\u05E8\u05EA \u05DE\u05D7\u05D3\u05DC, \u05DB\u05DC \u05D4\u05E2\u05D5\u05D1\u05D3\u05D9\u05DD \u05D4\u05E4\u05E2\u05D9\u05DC\u05D9\u05DD \u05E0\u05DB\u05DC\u05DC\u05D9\u05DD.", ["Report period"] = "\u05EA\u05E7\u05D5\u05E4\u05EA \u05D4\u05D3\u05D5\u05D7",
+        ["Days"] = "\u05D9\u05DE\u05D9\u05DD", ["Entries"] = "\u05E8\u05E9\u05D5\u05DE\u05D5\u05EA", ["Total leave days"] = "\u05E1\u05DA \u05D9\u05DE\u05D9 \u05D4\u05D4\u05D9\u05E2\u05D3\u05E8\u05D5\u05EA", ["Submission status"] = "\u05E1\u05D8\u05D8\u05D5\u05E1 \u05D3\u05D9\u05D5\u05D5\u05D7"
+    };
+
     public string Language(IHttpContextAccessor context) => Normalize(context.HttpContext?.Request.Cookies[LanguageCookieName]);
     public string Direction(IHttpContextAccessor context) => Language(context) == "he" ? "rtl" : "ltr";
-    public string Get(IHttpContextAccessor context, string value) => Language(context) == "he" && Hebrew.TryGetValue(value, out var translation) ? translation : value;
+    public string Get(IHttpContextAccessor context, string value) => Language(context) == "he" && (Hebrew.TryGetValue(value, out var translation) || AdditionalHebrew.TryGetValue(value, out translation)) ? translation : value;
 
     public string MonthName(IHttpContextAccessor context, int month)
     {

@@ -1,11 +1,128 @@
 @page
 @model EfcomReport.Pages.Admin.ReportsModel
 @{ ViewData["Title"] = T.Get(Context, "Reports"); }
-<div class="d-flex justify-content-between align-items-center mb-3"><h1>@T.Get(Context, "Reports")</h1><form method="get" class="d-flex gap-2" aria-label="Report period"><select class="form-select" name="month" onchange="this.form.submit()" aria-label="@T.Get(Context, "Month")">@for (var month = 1; month <= 12; month++) { <option value="@month" selected="@(Model.CurrentMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option> }</select><input class="form-control" type="number" name="year" min="2020" max="2100" value="@Model.CurrentYear" onchange="this.form.submit()" aria-label="@T.Get(Context, "Year")" /><noscript><button class="btn btn-outline-primary">@T.Get(Context, "Open")</button></noscript></form></div>
+
+<h1>@T.Get(Context, "Reports")</h1>
+
+<form method="get" class="card mb-3">
+    <div class="card-body">
+        <div class="row g-3 align-items-end">
+            <div class="col-md-3">
+                <label class="form-label">@T.Get(Context, "Start month")</label>
+                <select class="form-select" name="startMonth">
+                    @for (var month = 1; month <= 12; month++)
+                    {
+                        <option value="@month" selected="@(Model.CurrentStartMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">@T.Get(Context, "Start year")</label>
+                <input class="form-control" type="number" name="startYear" min="2020" max="2100" value="@Model.CurrentStartYear" />
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">@T.Get(Context, "End month")</label>
+                <select class="form-select" name="endMonth">
+                    @for (var month = 1; month <= 12; month++)
+                    {
+                        <option value="@month" selected="@(Model.CurrentEndMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label">@T.Get(Context, "End year")</label>
+                <input class="form-control" type="number" name="endYear" min="2020" max="2100" value="@Model.CurrentEndYear" />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" type="submit">@T.Get(Context, "Apply filters")</button>
+            </div>
+        </div>
+
+        <div class="mt-4">
+            <h2 class="h6">@T.Get(Context, "Employees")</h2>
+            <p class="text-muted small">@T.Get(Context, "By default, all active employees are included.")</p>
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-2">
+                @foreach (var employee in Model.Employees)
+                {
+                    <div class="col">
+                        <label class="form-check">
+                            <input class="form-check-input" type="checkbox" name="employeeIds" value="@employee.Id" checked="@(Model.SelectedEmployeeIds.Contains(employee.Id) ? "checked" : null)" />
+                            <span class="form-check-label">@employee.Name <span class="text-muted small">(@employee.Email)</span></span>
+                        </label>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</form>
+
 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
 @if (Model.Report is not null)
 {
-<p><a class="btn btn-outline-secondary" asp-page-handler="Csv" asp-route-year="@Model.CurrentYear" asp-route-month="@Model.CurrentMonth">@T.Get(Context, "Download CSV")</a></p>
-<form method="post" asp-page-handler="Send" class="card mb-3"><div class="card-body"><h2 class="h5">@T.Get(Context, "Send report")</h2><input type="hidden" name="year" value="@Model.CurrentYear" /><input type="hidden" name="month" value="@Model.CurrentMonth" /><div class="mb-2">@foreach (var recipient in Model.Recipients) { <label class="d-block"><input type="checkbox" name="SelectedRecipientIds" value="@recipient.Id" /> @recipient.Email</label> }</div><button class="btn btn-primary">@T.Get(Context, "Send selected recipients")</button></div></form>
-<div class="table-responsive"><table class="table table-sm table-striped"><thead><tr><th>@T.Get(Context, "Employee")</th>@foreach (var type in Model.Report.Types) { <th>@type.Name days</th><th>@type.Name entries</th> }<th>Total</th><th>@T.Get(Context, "Monthly submission")</th></tr></thead><tbody>@foreach (var row in Model.Report.Rows) { <tr class="@(row.SubmissionState == "Did not submit this month" ? "table-danger" : "")"><td>@row.EmployeeName</td>@foreach (var type in Model.Report.Types) { <td>@row.DaysByType.GetValueOrDefault(type.Name)</td><td>@row.EntryCounts.GetValueOrDefault(type.Name)</td> }<td>@row.TotalDays</td><td>@T.Get(Context, row.SubmissionState)</td></tr> }</tbody></table></div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="h4 mb-0">@T.Get(Context, "Report period"): @T.MonthName(Context, Model.Report.StartMonth) @Model.Report.StartYear – @T.MonthName(Context, Model.Report.EndMonth) @Model.Report.EndYear</h2>
+        <a class="btn btn-outline-secondary" href="@Model.CsvUrl">@T.Get(Context, "Download CSV")</a>
+    </div>
+
+    <form method="post" asp-page-handler="Send" class="card mb-3">
+        <div class="card-body">
+            <h2 class="h5">@T.Get(Context, "Send report")</h2>
+            <input type="hidden" name="startYear" value="@Model.Report.StartYear" />
+            <input type="hidden" name="startMonth" value="@Model.Report.StartMonth" />
+            <input type="hidden" name="endYear" value="@Model.Report.EndYear" />
+            <input type="hidden" name="endMonth" value="@Model.Report.EndMonth" />
+            @foreach (var employeeId in Model.SelectedEmployeeIds)
+            {
+                <input type="hidden" name="employeeIds" value="@employeeId" />
+            }
+            <div class="mb-2">
+                @foreach (var recipient in Model.Recipients)
+                {
+                    <label class="d-block"><input type="checkbox" name="SelectedRecipientIds" value="@recipient.Id" /> @recipient.Email</label>
+                }
+            </div>
+            <button class="btn btn-primary">@T.Get(Context, "Send selected recipients")</button>
+        </div>
+    </form>
+
+    <div class="table-responsive">
+        <table class="table table-sm table-striped">
+            <thead>
+                <tr>
+                    <th>@T.Get(Context, "Employee")</th>
+                    @foreach (var type in Model.Report.Types)
+                    {
+                        <th>@type.Name @T.Get(Context, "Days")</th>
+                        <th>@type.Name @T.Get(Context, "Entries")</th>
+                    }
+                    <th>@T.Get(Context, "Total leave days")</th>
+                    <th>@T.Get(Context, "Submission status")</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var row in Model.Report.Rows)
+                {
+                    var hasMissingSubmission = row.SubmissionStatuses.Any(x => x.State == "Did not submit this month");
+                    <tr class="@(hasMissingSubmission ? "table-danger" : "")">
+                        <td>@row.EmployeeName</td>
+                        @foreach (var type in Model.Report.Types)
+                        {
+                            <td>@row.DaysByType.GetValueOrDefault(type.Name)</td>
+                            <td>@row.EntryCounts.GetValueOrDefault(type.Name)</td>
+                        }
+                        <td>@row.TotalDays</td>
+                        <td>
+                            @foreach (var status in row.SubmissionStatuses)
+                            {
+                                <div class="@(status.State == "Did not submit this month" ? "text-danger fw-semibold" : "")">
+                                    @(Model.Report.IsSingleMonth ? "" : $"{T.MonthName(Context, status.Month)} {status.Year}: ")@T.Get(Context, status.State)
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
 }

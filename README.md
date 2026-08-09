@@ -10,8 +10,9 @@ Small monolithic ASP.NET Core Razor Pages application for employee leave trackin
 - Monthly submission state: absence submitted, no absence, or missing.
 - SQLite through Entity Framework Core.
 - Overlap protection for active absence requests.
-- Monthly report calculation based on the selected month only. A request crossing month boundaries is clipped to the report period.
+- Report calculation clips requests to the selected month range and counts distinct working dates across that range. Submission status remains visible for each month in the range.
 - Dynamic report columns for additional leave types.
+- Reports default to all active employees for the last completed month; administrators can select employees and a start/end month range. CSV downloads and emailed reports use the same filters.
 - CSV download and optional SMTP report delivery.
 - Monthly reminder worker plus a manual local test button.
 - Admin can send a targeted monthly submission request to one employee by email.

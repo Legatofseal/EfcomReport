@@ -170,20 +170,34 @@ public sealed class SubmissionService(AppDbContext db)
 
 public sealed class ReportService(AppDbContext db, WorkCalendarService calendar)
 {
-    public async Task<ReportView> BuildAsync(int year, int month)
+    public Task<ReportView> BuildAsync(int year, int month, IReadOnlyCollection<int>? employeeIds = null) =>
+        BuildRangeAsync(year, month, year, month, employeeIds);
+
+    public async Task<ReportView> BuildRangeAsync(int startYear, int startMonth, int endYear, int endMonth, IReadOnlyCollection<int>? employeeIds = null)
     {
-        var monthStart = new DateTime(year, month, 1);
-        var monthEnd = monthStart.AddMonths(1).AddDays(-1);
-        var overrides = await calendar.OverridesAsync(monthStart, monthEnd);
+        var rangeStart = new DateTime(startYear, startMonth, 1);
+        var rangeEnd = new DateTime(endYear, endMonth, 1).AddMonths(1).AddDays(-1);
+        var periods = new List<ReportPeriod>();
+        for (var cursor = rangeStart; cursor <= rangeEnd; cursor = cursor.AddMonths(1))
+            periods.Add(new ReportPeriod(cursor.Year, cursor.Month));
+
+        var overrides = await calendar.OverridesAsync(rangeStart, rangeEnd);
         var types = await db.LeaveTypes.OrderBy(x => x.Id).ToListAsync();
-        var employees = await db.Employees.Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
+        var requestedEmployeeIds = employeeIds?.Where(x => x > 0).Distinct().ToHashSet();
+        var employeeQuery = db.Employees.Where(x => x.IsActive);
+        if (requestedEmployeeIds is { Count: > 0 }) employeeQuery = employeeQuery.Where(x => requestedEmployeeIds.Contains(x.Id));
+        var employees = await employeeQuery.OrderBy(x => x.Name).ToListAsync();
+        var reportEmployeeIds = employees.Select(x => x.Id).ToHashSet();
         var submissions = await db.MonthlySubmissions
-            .Where(x => x.Year == year && x.Month == month)
-            .ToDictionaryAsync(x => x.EmployeeId);
+            .Where(x => x.Year > startYear || (x.Year == startYear && x.Month >= startMonth))
+            .Where(x => x.Year < endYear || (x.Year == endYear && x.Month <= endMonth))
+            .Where(x => reportEmployeeIds.Contains(x.EmployeeId))
+            .ToListAsync();
+        var submissionLookup = submissions.ToDictionary(x => (x.EmployeeId, x.Year, x.Month));
         var requests = await db.AbsenceRequests
             .Include(x => x.LeaveType)
             .Include(x => x.Employee)
-            .Where(x => !x.IsCancelled && x.StartDate <= monthEnd && x.EndDate >= monthStart)
+            .Where(x => !x.IsCancelled && reportEmployeeIds.Contains(x.EmployeeId) && x.StartDate <= rangeEnd && x.EndDate >= rangeStart)
             .ToListAsync();
 
         var rows = employees.ToDictionary(x => x.Id, x => new ReportRow(x.Name));
@@ -191,8 +205,8 @@ public sealed class ReportService(AppDbContext db, WorkCalendarService calendar)
         {
             if (!rows.TryGetValue(request.EmployeeId, out var row)) continue;
             row.EntryCounts[request.LeaveType.Name] = row.EntryCounts.GetValueOrDefault(request.LeaveType.Name) + 1;
-            var start = request.StartDate.Date < monthStart ? monthStart : request.StartDate.Date;
-            var end = request.EndDate.Date > monthEnd ? monthEnd : request.EndDate.Date;
+            var start = request.StartDate.Date < rangeStart ? rangeStart : request.StartDate.Date;
+            var end = request.EndDate.Date > rangeEnd ? rangeEnd : request.EndDate.Date;
             var typeDays = row.DaySets.GetValueOrDefault(request.LeaveType.Name);
             if (typeDays is null)
             {
@@ -213,21 +227,40 @@ public sealed class ReportService(AppDbContext db, WorkCalendarService calendar)
         {
             var row = rowPair.Value;
             row.TotalDays = row.DaySets.Values.SelectMany(x => x).Distinct().Count();
-            row.SubmissionState = submissions.TryGetValue(rowPair.Key, out var submission)
-                ? (submission.HasAbsence ? "Absences submitted" : "No absence")
-                : "Did not submit this month";
+            foreach (var period in periods)
+            {
+                row.SubmissionStatuses.Add(new ReportSubmissionStatus(
+                    period.Year,
+                    period.Month,
+                    submissionLookup.TryGetValue((rowPair.Key, period.Year, period.Month), out var submission)
+                        ? (submission.HasAbsence ? "Absences submitted" : "No absence")
+                        : "Did not submit this month"));
+            }
         }
 
-        return new ReportView(year, month, types, rows.Values.ToList());
+        return new ReportView(startYear, startMonth, endYear, endMonth, periods, types, rows.Values.ToList());
     }
 }
 
-public sealed class ReportView(int year, int month, IReadOnlyList<LeaveType> types, IReadOnlyList<ReportRow> rows)
+public sealed record ReportPeriod(int Year, int Month);
+
+public sealed record ReportSubmissionStatus(int Year, int Month, string State);
+
+public sealed class ReportView(int startYear, int startMonth, int endYear, int endMonth, IReadOnlyList<ReportPeriod> periods, IReadOnlyList<LeaveType> types, IReadOnlyList<ReportRow> rows)
 {
-    public int Year { get; } = year;
-    public int Month { get; } = month;
+    public int StartYear { get; } = startYear;
+    public int StartMonth { get; } = startMonth;
+    public int EndYear { get; } = endYear;
+    public int EndMonth { get; } = endMonth;
+    public int Year => StartYear;
+    public int Month => StartMonth;
+    public IReadOnlyList<ReportPeriod> Periods { get; } = periods;
     public IReadOnlyList<LeaveType> Types { get; } = types;
     public IReadOnlyList<ReportRow> Rows { get; } = rows;
+    public bool IsSingleMonth => StartYear == EndYear && StartMonth == EndMonth;
+    public string PeriodLabel => IsSingleMonth
+        ? $"{StartYear}-{StartMonth:00}"
+        : $"{StartYear}-{StartMonth:00} to {EndYear}-{EndMonth:00}";
 }
 
 public sealed class ReportRow(string employeeName)
@@ -237,7 +270,8 @@ public sealed class ReportRow(string employeeName)
     public Dictionary<string, int> EntryCounts { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, HashSet<DateTime>> DaySets { get; } = new(StringComparer.OrdinalIgnoreCase);
     public int TotalDays { get; set; }
-    public string SubmissionState { get; set; } = "Did not submit this month";
+    public List<ReportSubmissionStatus> SubmissionStatuses { get; } = [];
+    public string SubmissionState => string.Join("; ", SubmissionStatuses.Select(x => $"{x.Year}-{x.Month:00}: {x.State}"));
 }
 
 public sealed class EmailService(IConfiguration configuration, ILogger<EmailService> logger)
