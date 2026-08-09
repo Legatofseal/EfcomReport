@@ -62,6 +62,10 @@
                                 <input type="hidden" name="id" value="@recipient.Id" />
                                 <button class="btn btn-sm btn-outline-secondary" type="submit">@T.Get(Context, "Toggle")</button>
                             </form>
+                            <form method="post" asp-page-handler="Delete" class="d-inline" onsubmit="return confirm('@T.Get(Context, "Delete invoice recipient?")');">
+                                <input type="hidden" name="id" value="@recipient.Id" />
+                                <button class="btn btn-sm btn-outline-danger" type="submit">@T.Get(Context, "Delete")</button>
+                            </form>
                         </td>
                     </tr>
                 }

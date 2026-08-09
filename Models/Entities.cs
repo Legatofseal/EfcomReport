@@ -42,6 +42,9 @@ public sealed class AbsenceRequest
     public string? AttachmentStorageName { get; set; }
     public string? AttachmentContentType { get; set; }
     public long? AttachmentSize { get; set; }
+    public string? AttachmentUploadedByName { get; set; }
+    public string? AttachmentUploadedByEmail { get; set; }
+    public DateTime? AttachmentUploadedAtUtc { get; set; }
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public string CreatedByEmail { get; set; } = "";

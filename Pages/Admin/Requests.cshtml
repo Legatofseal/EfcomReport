@@ -2,4 +2,15 @@
 @model EfcomReport.Pages.Admin.RequestsModel
 @{ ViewData["Title"] = T.Get(Context, "All absence requests"); }
 <div class="d-flex justify-content-between align-items-center mb-3"><h1>@T.Get(Context, "All absence requests")</h1><form method="get" class="d-flex gap-2"><select class="form-select" name="month">@for (var month = 1; month <= 12; month++) { <option value="@month" selected="@(Model.CurrentMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option> }</select><input class="form-control" type="number" name="year" min="2020" max="2100" value="@Model.CurrentYear" /><button class="btn btn-outline-primary">@T.Get(Context, "Open")</button></form></div>
-<div class="table-responsive"><table class="table table-striped"><thead><tr><th>@T.Get(Context, "Employee")</th><th>@T.Get(Context, "Type")</th><th>@T.Get(Context, "Start date")</th><th>@T.Get(Context, "End date")</th><th>@T.Get(Context, "Submitted by")</th><th>@T.Get(Context, "Document")</th><th></th></tr></thead><tbody>@foreach (var item in Model.Requests) { <tr><td>@item.Employee.Name</td><td>@item.LeaveType.Name</td><td>@item.StartDate.ToString("yyyy-MM-dd")</td><td>@item.EndDate.ToString("yyyy-MM-dd")</td><td>@item.CreatedByEmail</td><td>@if (item.AttachmentOriginalName is not null) { <a asp-page="/Requests/Attachment" asp-route-id="@item.Id">@T.Get(Context, "Download")</a> }</td><td><a asp-page="/Requests/Edit" asp-route-id="@item.Id">@T.Get(Context, "Edit")</a></td></tr> }</tbody></table></div>
+<div class="table-responsive"><table class="table table-striped"><thead><tr><th>@T.Get(Context, "Employee")</th><th>@T.Get(Context, "Type")</th><th>@T.Get(Context, "Start date")</th><th>@T.Get(Context, "End date")</th><th>@T.Get(Context, "Submitted by")</th><th>@T.Get(Context, "Document")</th><th></th></tr></thead><tbody>
+@foreach (var item in Model.Requests)
+{
+    <tr><td>@item.Employee.Name</td><td>@item.LeaveType.Name</td><td>@item.StartDate.ToString("yyyy-MM-dd")</td><td>@item.EndDate.ToString("yyyy-MM-dd")</td><td>@item.CreatedByEmail</td><td>
+        @if (item.AttachmentOriginalName is not null)
+        {
+            <a asp-page="/Requests/Attachment" asp-route-id="@item.Id">@T.Get(Context, "Download")</a>
+            <div class="small text-muted">@(item.AttachmentUploadedByName ?? item.AttachmentUploadedByEmail ?? item.CreatedByEmail)<br />@((item.AttachmentUploadedAtUtc ?? item.CreatedAtUtc).ToLocalTime().ToString("yyyy-MM-dd HH:mm"))</div>
+        }
+    </td><td><a asp-page="/Requests/Edit" asp-route-id="@item.Id">@T.Get(Context, "Edit")</a></td></tr>
+}
+</tbody></table></div>

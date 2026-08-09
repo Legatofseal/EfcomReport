@@ -26,19 +26,37 @@ public class SettingsModel(AppDbContext db, EmailService email, IConfiguration c
     public async Task<IActionResult> OnPostAddEmployeeAsync()
     {
         var name = (EmployeeName ?? "").Trim();
-        var email = (EmployeeEmail ?? "").Trim().ToLowerInvariant();
+        var emailAddress = (EmployeeEmail ?? "").Trim().ToLowerInvariant();
         // Validate the normalized values so pasted whitespace does not reject a valid address.
         ModelState.Remove(nameof(EmployeeName));
         ModelState.Remove(nameof(EmployeeEmail));
         if (string.IsNullOrWhiteSpace(name)) ModelState.AddModelError(nameof(EmployeeName), "Enter a name.");
-        if (!new EmailAddressAttribute().IsValid(email)) ModelState.AddModelError(nameof(EmployeeEmail), "Enter a valid email.");
-        if (new EmailAddressAttribute().IsValid(email) && await db.Employees.AnyAsync(x => x.Email == email)) ModelState.AddModelError(nameof(EmployeeEmail), "Employee email already exists.");
+        if (!new EmailAddressAttribute().IsValid(emailAddress)) ModelState.AddModelError(nameof(EmployeeEmail), "Enter a valid email.");
+        if (new EmailAddressAttribute().IsValid(emailAddress) && await db.Employees.AnyAsync(x => x.Email == emailAddress)) ModelState.AddModelError(nameof(EmployeeEmail), "Employee email already exists.");
         if (!ModelState.IsValid) { await LoadAsync(); return Page(); }
-        var employee = new Employee { Name = name, Email = email };
+        var employee = new Employee { Name = name, Email = emailAddress };
         db.Employees.Add(employee);
-        var user = await db.AppUsers.SingleOrDefaultAsync(x => x.Email == email);
-        if (user is not null) user.Employee = employee;
-        await db.SaveChangesAsync(); return RedirectToPage();
+        var user = await db.AppUsers.SingleOrDefaultAsync(x => x.Email == emailAddress);
+        if (user is not null) { user.Employee = employee; user.IsActive = true; }
+        await db.SaveChangesAsync();
+
+        if (!email.IsConfigured)
+        {
+            TempData["Message"] = $"Employee added. SMTP is not configured, so no invitation email was sent to {emailAddress}.";
+            return RedirectToPage();
+        }
+
+        var publicUrl = (configuration["App:PublicUrl"] ?? "http://localhost:5186").TrimEnd('/');
+        try
+        {
+            await email.SendAsync([emailAddress], "EfcomReport invitation", $"Hello {name},\n\nYou have been invited to use EfcomReport. Sign in with this Google account here: {publicUrl}/account/login\n\nYour administrator has added you to the leave tracker.");
+            TempData["Message"] = $"Employee added and invitation sent to {emailAddress}.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Message"] = $"Employee added, but the invitation email could not be sent: {ex.Message}";
+        }
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostToggleEmployeeAsync(int id)

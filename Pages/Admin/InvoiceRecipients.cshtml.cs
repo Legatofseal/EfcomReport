@@ -80,6 +80,24 @@ public sealed class InvoiceRecipientsModel(AppDbContext db) : PageModel
         return RedirectToPage();
     }
 
+    public async Task<IActionResult> OnPostDeleteAsync(int id)
+    {
+        var recipient = await db.InvoiceRecipients.SingleOrDefaultAsync(x => x.Id == id);
+        if (recipient is null) return NotFound();
+
+        var replacement = recipient.IsDefault
+            ? await db.InvoiceRecipients
+                .Where(x => x.Id != recipient.Id && x.IsActive)
+                .OrderBy(x => x.Name)
+                .ThenBy(x => x.Email)
+                .FirstOrDefaultAsync()
+            : null;
+        if (replacement is not null) replacement.IsDefault = true;
+        db.InvoiceRecipients.Remove(recipient);
+        await db.SaveChangesAsync();
+        return RedirectToPage();
+    }
+
     private async Task LoadAsync()
     {
         Recipients = await db.InvoiceRecipients

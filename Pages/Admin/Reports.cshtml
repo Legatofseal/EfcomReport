@@ -65,6 +65,30 @@
         <a class="btn btn-outline-secondary" href="@Model.CsvUrl">@T.Get(Context, "Download report package")</a>
     </div>
 
+    @if (Model.Report.IsSingleMonth)
+    {
+        <div class="card border-warning mb-3">
+            <div class="card-body d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <strong>@T.Get(Context, "Delete month records")</strong>
+                    <div class="text-muted small">@T.Get(Context, "Available only after every active employee has confirmed this month. Multi-month absence records are retained.")</div>
+                </div>
+                @if (Model.CanDeleteCurrentMonth)
+                {
+                    <form method="post" asp-page-handler="DeleteMonth" onsubmit="return confirm('@T.Get(Context, "Delete all records for this month?")');">
+                        <input type="hidden" name="year" value="@Model.Report.StartYear" />
+                        <input type="hidden" name="month" value="@Model.Report.StartMonth" />
+                        <button class="btn btn-outline-danger" type="submit">@T.Get(Context, "Delete month records")</button>
+                    </form>
+                }
+                else
+                {
+                    <span class="badge text-bg-secondary">@T.Get(Context, "Waiting for confirmations")</span>
+                }
+            </div>
+        </div>
+    }
+
     <form method="post" asp-page-handler="Send" class="card mb-3">
         <div class="card-body">
             <h2 class="h5">@T.Get(Context, "Send report")</h2>

@@ -166,6 +166,21 @@ public sealed class AttachmentService(IConfiguration configuration)
         var path = GetInvoicePath(storageName);
         if (path is not null && File.Exists(path)) File.Delete(path);
     }
+
+    public string GetDownloadName(AbsenceRequest request)
+    {
+        var extension = Path.GetExtension(request.AttachmentOriginalName ?? "document").ToLowerInvariant();
+        var uploader = SafeFilePart(request.AttachmentUploadedByName ?? request.AttachmentUploadedByEmail ?? request.CreatedByEmail, "user");
+        var uploadedAt = (request.AttachmentUploadedAtUtc ?? request.CreatedAtUtc).ToLocalTime().ToString("yyyyMMdd-HHmm");
+        var period = $"{request.StartDate:yyyyMMdd}-{request.EndDate:yyyyMMdd}";
+        return $"{uploader}_{uploadedAt}_{period}{extension}";
+    }
+
+    private static string SafeFilePart(string value, string fallback)
+    {
+        var cleaned = string.Concat(value.Trim().Select(character => char.IsLetterOrDigit(character) || character is '-' or '_' ? character : '_'));
+        return string.IsNullOrWhiteSpace(cleaned) ? fallback : cleaned;
+    }
 }
 
 public sealed class SubmissionService(AppDbContext db)

@@ -18,6 +18,6 @@ public class AttachmentModel(AppDbContext db, CurrentUserService currentUser, At
         if (user is null || (user.Role != "Admin" && user.EmployeeId != request.EmployeeId)) return Forbid();
         var path = attachments.GetPath(request.AttachmentStorageName);
         if (path is null || !System.IO.File.Exists(path)) return NotFound();
-        return PhysicalFile(path, request.AttachmentContentType ?? "application/octet-stream", request.AttachmentOriginalName ?? "document");
+        return PhysicalFile(path, request.AttachmentContentType ?? "application/octet-stream", attachments.GetDownloadName(request));
     }
 }

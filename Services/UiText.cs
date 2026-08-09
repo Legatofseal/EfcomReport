@@ -65,6 +65,90 @@ public sealed class UiText
         ["Missing submissions are highlighted and selected by default."] = "\u05D3\u05D9\u05D5\u05D5\u05D7\u05D9\u05DD \u05D7\u05E1\u05E8\u05D9\u05DD \u05DE\u05D5\u05D3\u05D2\u05E9\u05D9\u05DD \u05D5\u05E0\u05D1\u05D7\u05E8\u05D9\u05DD \u05D1\u05E8\u05D9\u05E8\u05EA \u05DE\u05D7\u05D3\u05DC.", ["Request reports from selected employees"] = "\u05D1\u05E7\u05E9 \u05D3\u05D9\u05D5\u05D5\u05D7\u05D9\u05DD \u05DE\u05D4\u05E2\u05D5\u05D1\u05D3\u05D9\u05DD \u05E9\u05E0\u05D1\u05D7\u05E8\u05D5", ["Email selected employees and ask for a monthly submission."] = "\u05E9\u05DC\u05D7 \u05DC\u05E2\u05D5\u05D1\u05D3\u05D9\u05DD \u05E9\u05E0\u05D1\u05D7\u05E8\u05D5 \u05D1\u05E7\u05E9\u05D4 \u05DC\u05D3\u05D9\u05D5\u05D5\u05D7 \u05D7\u05D5\u05D3\u05E9\u05D9.", ["No employees selected."] = "\u05DC\u05D0 \u05E0\u05D1\u05D7\u05E8\u05D5 \u05E2\u05D5\u05D1\u05D3\u05D9\u05DD"
     };
 
+    private static readonly IReadOnlyDictionary<string, string> Russian = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Tracker"] = "Трекер", ["Invoices"] = "Инвойсы", ["Invoice entries"] = "Записи инвойсов", ["New invoice entry"] = "Новая запись инвойса", ["Invoice recipients"] = "Получатели инвойсов",
+        ["Administration"] = "Администрирование", ["My tracker"] = "Мой трекер", ["Work calendar"] = "Рабочий календарь", ["Sign in"] = "Войти", ["Sign out"] = "Выйти", ["Language"] = "Язык",
+        ["Employees and settings"] = "Сотрудники и настройки", ["Employees"] = "Сотрудники", ["Full name"] = "Полное имя", ["Google email"] = "Email Google", ["Name"] = "Имя", ["Email"] = "Email", ["Status"] = "Статус", ["Active"] = "Активен", ["Inactive"] = "Неактивен", ["Toggle"] = "Изменить статус", ["Add"] = "Добавить",
+        ["Administrators"] = "Администраторы", ["Administrator name"] = "Имя администратора", ["Administrator Google email"] = "Email Google администратора", ["Invite administrator"] = "Пригласить администратора", ["Invite"] = "Пригласить", ["Leave types"] = "Типы отсутствий", ["New leave type"] = "Новый тип отсутствия", ["Type"] = "Тип", ["Report recipients"] = "Получатели отчётов", ["Reports"] = "Отчёты", ["All requests"] = "Все запросы", ["Reminders"] = "Напоминания", ["Request a report"] = "Запросить отчёт",
+        ["My leave tracker"] = "Мой трекер отсутствий", ["Month"] = "Месяц", ["Year"] = "Год", ["Open"] = "Открыть", ["Monthly submission"] = "Месячный отчёт", ["Add absence"] = "Добавить отсутствие", ["My absences"] = "Мои отсутствия", ["No absence records for this month."] = "За этот месяц нет записей об отсутствии.", ["Confirmed"] = "Подтверждён", ["Not confirmed"] = "Не подтверждён", ["Confirm monthly report"] = "Подтвердить месячный отчёт", ["Absences submitted"] = "Отсутствия отправлены", ["No absence"] = "Отсутствий нет", ["Did not submit this month"] = "Отчёт за месяц не отправлен",
+        ["Document"] = "Документ", ["Edit"] = "Изменить", ["Download"] = "Скачать", ["Leave type"] = "Тип отсутствия", ["Select..."] = "Выберите...", ["Start date"] = "Дата начала", ["End date"] = "Дата окончания", ["Sick-leave document"] = "Документ о болезни", ["(optional)"] = "(необязательно)", ["Notes"] = "Примечания", ["Save"] = "Сохранить", ["Cancel"] = "Отмена", ["Edit absence"] = "Изменить отсутствие", ["Current:"] = "Текущий:", ["Remove current document"] = "Удалить текущий документ", ["Save changes"] = "Сохранить изменения", ["Cancel absence"] = "Отменить отсутствие",
+        ["Read-only view of the administrator calendar."] = "Календарь доступен пользователям только для просмотра.", ["Working day"] = "Рабочий день", ["Day off"] = "Выходной", ["Working"] = "Рабочий", ["Off"] = "Выходной", ["Employee"] = "Сотрудник", ["Send"] = "Отправить", ["Recent requests"] = "Последние запросы", ["Period"] = "Период", ["Sent to"] = "Отправлено", ["Requested at"] = "Дата запроса", ["By"] = "Кем отправлено", ["Days"] = "Дни", ["Entries"] = "Записи", ["Total leave days"] = "Всего дней отсутствия", ["Submission status"] = "Статус отчёта", ["Download report package"] = "Скачать пакет отчёта", ["Send report"] = "Отправить отчёт", ["Send selected recipients"] = "Отправить выбранным получателям", ["Remind"] = "Напомнить",
+        ["Payment types"] = "Типы оплаты", ["Manage the payment types available when submitting an invoice."] = "Управление типами оплаты при отправке инвойса.", ["Add payment type"] = "Добавить тип оплаты", ["Configured payment types"] = "Настроенные типы оплаты", ["No payment types configured yet."] = "Типы оплаты ещё не настроены.", ["Select payment type"] = "Выберите тип оплаты", ["No active payment types are configured. Ask an administrator to add one."] = "Нет активных типов оплаты. Попросите администратора добавить тип.", ["Placeholder - not a real invoice"] = "Placeholder — это не настоящий инвойс", ["Placeholder"] = "Placeholder", ["Kind"] = "Вид", ["Invoice"] = "Инвойс", ["Sent by email only"] = "Только отправлен по email", ["Delete"] = "Удалить", ["Delete invoice recipient?"] = "Удалить получателя инвойсов?", ["Delete month records"] = "Удалить записи за месяц", ["Available only after every active employee has confirmed this month. Multi-month absence records are retained."] = "Доступно после подтверждения месяца всеми активными сотрудниками. Записи, проходящие через несколько месяцев, сохраняются.", ["Delete all records for this month?"] = "Удалить все записи за этот месяц?", ["Waiting for confirmations"] = "Ожидание подтверждений"
+    };
+
+    private static readonly IReadOnlyDictionary<string, string> RussianAdditional = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Your Google account is not linked to an employee yet. Ask an administrator to add your email."] = "Ваш аккаунт Google ещё не связан с сотрудником. Попросите администратора добавить ваш адрес.",
+        ["Workdays are calculated from the administrator calendar."] = "Рабочие дни рассчитываются по календарю администратора.",
+        ["Only for Sick Leave. PDF, JPG or PNG, up to 10 MB."] = "Только для больничного. PDF или JPG/PNG, до 10 МБ.",
+        ["Manual administrator changes are marked with *."] = "Ручные изменения администратора отмечены символом *.",
+        ["Manual administrator override"] = "Ручное изменение администратора",
+        ["Default calendar rule"] = "Правило календаря по умолчанию",
+        ["Default: Sundayâ€“Thursday working. Click a date to create or change an override."] = "По умолчанию рабочие дни — с воскресенья по четверг. Нажмите на дату, чтобы создать или изменить исключение.",
+        ["Manage employees, leave types and report recipients."] = "Управление сотрудниками, типами отсутствий и получателями отчётов.",
+        ["Mark individual dates as working or non-working."] = "Отметить отдельные даты как рабочие или нерабочие.",
+        ["Review missing submissions and email a report."] = "Проверить отсутствующие отчёты и отправить отчёт по email.",
+        ["Review and correct employee absence requests."] = "Просмотр и исправление заявок сотрудников об отсутствии.",
+        ["Test monthly reminders for employees who have not submitted."] = "Проверить ежемесячные напоминания сотрудникам, которые не отправили отчёт.",
+        ["Email a specific employee and ask for a monthly submission."] = "Отправить выбранному сотруднику письмо с просьбой предоставить месячный отчёт.",
+        ["Request a report from an employee"] = "Запросить отчёт у сотрудника",
+        ["The selected employee receives an email asking them to submit the selected month, or confirm that there was no absence."] = "Выбранный сотрудник получит письмо с просьбой отправить отчёт за выбранный месяц или подтвердить отсутствие отсутствий.",
+        ["Choose who receives invoice emails from the Invoices module."] = "Выберите получателей писем об инвойсах из раздела «Инвойсы».",
+        ["Add invoice recipient"] = "Добавить получателя инвойсов",
+        ["Recipient name"] = "Имя получателя",
+        ["Invoice recipient email"] = "Email получателя инвойсов",
+        ["Configured recipients"] = "Настроенные получатели",
+        ["Default"] = "По умолчанию",
+        ["Set default"] = "Сделать получателем по умолчанию",
+        ["Select invoice recipient"] = "Выберите получателя инвойса",
+        ["No invoice recipients configured yet."] = "Получатели инвойсов ещё не настроены.",
+        ["Yes"] = "Да",
+        ["No active invoice recipients are configured. Ask an administrator to add one."] = "Нет активных получателей инвойсов. Попросите администратора добавить получателя.",
+        ["Start month"] = "Начальный месяц",
+        ["Start year"] = "Начальный год",
+        ["End month"] = "Конечный месяц",
+        ["End year"] = "Конечный год",
+        ["Apply filters"] = "Применить фильтры",
+        ["By default, all active employees are included."] = "По умолчанию включены все активные сотрудники.",
+        ["Report period"] = "Период отчёта",
+        ["Request reports from employees"] = "Запросить отчёты у сотрудников",
+        ["Select a month to see who has not submitted. Missing submissions are selected by default."] = "Выберите месяц, чтобы увидеть, кто не отправил отчёт. Отсутствующие отчёты выбраны по умолчанию.",
+        ["Missing submissions are highlighted and selected by default."] = "Отсутствующие отчёты выделены и выбраны по умолчанию.",
+        ["Request reports from selected employees"] = "Запросить отчёты у выбранных сотрудников",
+        ["Email selected employees and ask for a monthly submission."] = "Отправить выбранным сотрудникам письмо с просьбой предоставить месячный отчёт.",
+        ["No employees selected."] = "Сотрудники не выбраны.",
+        ["Monthly reminders"] = "Ежемесячные напоминания",
+        ["The background worker checks the configured day of month. Use this button to test the reminder run locally."] = "Фоновая служба проверяет заданный день месяца. Используйте эту кнопку для локальной проверки напоминаний.",
+        ["Run reminder check now"] = "Проверить напоминания сейчас",
+        ["Submit an invoice entry and send it by email with its document. The document is not stored in the portal."] = "Создайте запись инвойса и отправьте её по email вместе с документом. Документ не сохраняется в портале.",
+        ["Recipient email"] = "Email получателя",
+        ["Customer"] = "Клиент",
+        ["Invoice number"] = "Номер инвойса",
+        ["Currency symbol"] = "Символ валюты",
+        ["optional"] = "необязательно",
+        ["Amount"] = "Сумма",
+        ["Payment type / reference"] = "Тип оплаты / ссылка",
+        ["Payment type"] = "Тип оплаты",
+        ["Invoice document"] = "Документ инвойса",
+        ["PDF, JPG or PNG, up to 10 MB."] = "PDF, JPG или PNG, до 10 МБ.",
+        ["Try to fill from document"] = "Попробовать заполнить из документа",
+        ["Comments"] = "Комментарии",
+        ["Submit invoice"] = "Отправить инвойс",
+        ["All submitted invoice entries."] = "Все отправленные записи инвойсов.",
+        ["Your submitted invoice entries."] = "Ваши отправленные записи инвойсов.",
+        ["No invoice entries yet."] = "Записей инвойсов пока нет.",
+        ["Date"] = "Дата",
+        ["Sent"] = "Отправлен",
+        ["Saved; email not sent"] = "Сохранён; email не отправлен",
+        ["Submitted by"] = "Отправил",
+        ["All absence requests"] = "Все заявки об отсутствии",
+        ["Privacy Policy"] = "Политика конфиденциальности",
+        ["Use this page to detail your site's privacy policy."] = "Используйте эту страницу для описания политики конфиденциальности сайта.",
+        ["Error."] = "Ошибка.",
+        ["An error occurred while processing your request."] = "При обработке запроса произошла ошибка."
+    };
+
     private static readonly IReadOnlyDictionary<string, string> NewHebrew = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["Confirmed"] = "\\u05D0\\u05D5\\u05E9\\u05E8", ["Not confirmed"] = "\\u05DC\\u05D0 \\u05D0\\u05D5\\u05E9\\u05E8", ["Confirm monthly report"] = "\\u05D0\\u05E9\\u05E8 \\u05D3\\u05D9\\u05D5\\u05D5\\u05D7 \\u05D7\\u05D5\\u05D3\\u05E9\\u05D9", ["Download report package"] = "\\u05D4\\u05D5\\u05E8\\u05D3 \\u05D7\\u05D1\\u05D9\\u05DC\\u05EA \\u05D3\\u05D5\\u05D7", ["Remind"] = "\\u05D4\\u05D6\\u05DB\\u05E8",
@@ -76,7 +160,10 @@ public sealed class UiText
     public string Direction(IHttpContextAccessor context) => Language(context) == "he" ? "rtl" : "ltr";
     public string Get(IHttpContextAccessor context, string value)
     {
-        if (Language(context) != "he") return value;
+        var language = Language(context);
+        if (language == "ru" && Russian.TryGetValue(value, out var russian)) return russian;
+        if (language == "ru" && RussianAdditional.TryGetValue(value, out russian)) return russian;
+        if (language != "he") return value;
         if (!Hebrew.TryGetValue(value, out var translation) && !AdditionalHebrew.TryGetValue(value, out translation) && !NewHebrew.TryGetValue(value, out translation))
             return value;
         return DecodeTranslation(translation);
@@ -107,7 +194,7 @@ public sealed class UiText
         if (month is < 1 or > 12) return month.ToString(CultureInfo.InvariantCulture);
         if (Language(context) == "he")
             return new[] { "\u05D9\u05E0\u05D5\u05D0\u05E8", "\u05E4\u05D1\u05E8\u05D5\u05D0\u05E8", "\u05DE\u05E8\u05E5", "\u05D0\u05E4\u05E8\u05D9\u05DC", "\u05DE\u05D0\u05D9", "\u05D9\u05D5\u05E0\u05D9", "\u05D9\u05D5\u05DC\u05D9", "\u05D0\u05D5\u05D2\u05D5\u05E1\u05D8", "\u05E1\u05E4\u05D8\u05DE\u05D1\u05E8", "\u05D0\u05D5\u05E7\u05D8\u05D5\u05D1\u05E8", "\u05E0\u05D5\u05D1\u05DE\u05D1\u05E8", "\u05D3\u05E6\u05DE\u05D1\u05E8" }[month - 1];
-        if (Language(context) == "he") return new[] { "ינואר", "פברואר", "מרץ", "אפריל", "מאי", "יוני", "יולי", "אוגוסט", "ספטמבר", "אוקטובר", "נובמבר", "דצמבר" }[month - 1];
+        if (Language(context) == "ru") return CultureInfo.GetCultureInfo("ru-RU").DateTimeFormat.GetMonthName(month);
         return CultureInfo.GetCultureInfo("en-US").DateTimeFormat.GetMonthName(month);
     }
 
@@ -118,5 +205,10 @@ public sealed class UiText
         return $"/language/set?language={Uri.EscapeDataString(Normalize(language))}&returnUrl={Uri.EscapeDataString(returnUrl)}";
     }
 
-    public static string Normalize(string? language) => string.Equals(language, "he", StringComparison.OrdinalIgnoreCase) ? "he" : "en";
+    public static string Normalize(string? language) => language?.Trim().ToLowerInvariant() switch
+    {
+        "he" => "he",
+        "ru" => "ru",
+        _ => "en"
+    };
 }

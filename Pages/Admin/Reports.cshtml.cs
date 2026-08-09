@@ -26,6 +26,7 @@ public class ReportsModel(AppDbContext db, ReportService reports, EmailService e
     public List<Employee> Employees { get; private set; } = [];
     public List<int> SelectedEmployeeIds { get; private set; } = [];
     public List<ReportRecipient> Recipients { get; private set; } = [];
+    public bool CanDeleteCurrentMonth { get; private set; }
     public string CsvUrl => BuildReportUrl(
         new DateTime(CurrentStartYear, CurrentStartMonth, 1),
         new DateTime(CurrentEndYear, CurrentEndMonth, 1),
@@ -40,6 +41,7 @@ public class ReportsModel(AppDbContext db, ReportService reports, EmailService e
         if (!TryGetPeriod(out var start, out var end)) return;
         SelectedEmployeeIds = NormalizeEmployeeSelection(EmployeeIds);
         Report = await reports.BuildRangeAsync(start.Year, start.Month, end.Year, end.Month, SelectedEmployeeIds);
+        await LoadDeleteStateAsync(start, end);
     }
 
     public async Task<IActionResult> OnGetCsvAsync(int startYear, int startMonth, int endYear, int endMonth, List<int>? employeeIds)
@@ -112,10 +114,57 @@ public class ReportsModel(AppDbContext db, ReportService reports, EmailService e
         return Redirect(BuildReportUrl(start, end, SelectedEmployeeIds));
     }
 
+    public async Task<IActionResult> OnPostDeleteMonthAsync(int year, int month)
+    {
+        if (year is < 2020 or > 2100 || month is < 1 or > 12)
+        {
+            TempData["Message"] = "Select a valid month and year.";
+            return RedirectToPage();
+        }
+
+        var start = new DateTime(year, month, 1);
+        var end = start.AddMonths(1).AddDays(-1);
+        var activeEmployeeIds = await db.Employees.Where(x => x.IsActive).Select(x => x.Id).ToListAsync();
+        var confirmedCount = await db.MonthlySubmissions
+            .Where(x => x.Year == year && x.Month == month && activeEmployeeIds.Contains(x.EmployeeId) && x.IsConfirmed)
+            .CountAsync();
+        if (activeEmployeeIds.Count == 0 || confirmedCount != activeEmployeeIds.Count)
+        {
+            TempData["Message"] = "The month cannot be deleted until every active employee has confirmed the report.";
+            return Redirect(BuildReportUrl(start, end, []));
+        }
+
+        var absenceRequests = await db.AbsenceRequests
+            .Where(x => x.StartDate >= start && x.EndDate <= end)
+            .ToListAsync();
+        foreach (var request in absenceRequests)
+            attachments.Delete(request.AttachmentStorageName);
+
+        var submissions = await db.MonthlySubmissions.Where(x => x.Year == year && x.Month == month).ToListAsync();
+        var reportRequests = await db.ReportRequests.Where(x => x.Year == year && x.Month == month).ToListAsync();
+        db.AbsenceRequests.RemoveRange(absenceRequests);
+        db.MonthlySubmissions.RemoveRange(submissions);
+        db.ReportRequests.RemoveRange(reportRequests);
+        await db.SaveChangesAsync();
+        TempData["Message"] = $"Deleted {absenceRequests.Count} absence record(s) and the confirmed report records for {year}-{month:00}.";
+        return Redirect(BuildReportUrl(start, end, []));
+    }
+
     private async Task LoadAsync()
     {
         Employees = await db.Employees.Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
         Recipients = await db.ReportRecipients.Where(x => x.IsActive).OrderBy(x => x.Email).ToListAsync();
+    }
+
+    private async Task LoadDeleteStateAsync(DateTime start, DateTime end)
+    {
+        CanDeleteCurrentMonth = false;
+        if (start.Year != end.Year || start.Month != end.Month) return;
+        var activeEmployeeIds = await db.Employees.Where(x => x.IsActive).Select(x => x.Id).ToListAsync();
+        if (activeEmployeeIds.Count == 0) return;
+        var confirmedCount = await db.MonthlySubmissions
+            .CountAsync(x => x.Year == start.Year && x.Month == start.Month && activeEmployeeIds.Contains(x.EmployeeId) && x.IsConfirmed);
+        CanDeleteCurrentMonth = confirmedCount == activeEmployeeIds.Count;
     }
 
     private List<int> NormalizeEmployeeSelection(IEnumerable<int>? employeeIds)
@@ -184,7 +233,7 @@ public class ReportsModel(AppDbContext db, ReportService reports, EmailService e
             {
                 var path = attachments.GetPath(request.AttachmentStorageName);
                 if (path is null || !System.IO.File.Exists(path)) continue;
-                var originalName = Path.GetFileName(request.AttachmentOriginalName ?? $"absence-{request.Id}");
+                var originalName = attachments.GetDownloadName(request);
                 var fileName = MakeUniqueFileName(originalName, usedNames);
                 var documentEntry = archive.CreateEntry($"documents/{fileName}", CompressionLevel.Fastest);
                 await using var input = System.IO.File.OpenRead(path);

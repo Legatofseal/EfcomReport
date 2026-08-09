@@ -49,12 +49,16 @@ public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCa
         try
         {
             if (Attachment is not null) storedAttachment = await attachments.SaveAsync(Attachment);
+            var uploadedAtUtc = Attachment is null ? (DateTime?)null : DateTime.UtcNow;
             db.AbsenceRequests.Add(new AbsenceRequest
             {
                 EmployeeId = employeeId, LeaveTypeId = LeaveTypeId, StartDate = StartDate, EndDate = EndDate,
                 Notes = Notes?.Trim(), CreatedByEmail = user.Email, CreatedAtUtc = DateTime.UtcNow, UpdatedAtUtc = DateTime.UtcNow,
                 AttachmentOriginalName = storedAttachment?.OriginalName, AttachmentStorageName = storedAttachment?.StorageName,
-                AttachmentContentType = storedAttachment?.ContentType, AttachmentSize = storedAttachment?.Size
+                AttachmentContentType = storedAttachment?.ContentType, AttachmentSize = storedAttachment?.Size,
+                AttachmentUploadedByName = storedAttachment is null ? null : user.DisplayName,
+                AttachmentUploadedByEmail = storedAttachment is null ? null : user.Email,
+                AttachmentUploadedAtUtc = uploadedAtUtc
             });
             await db.SaveChangesAsync();
         }

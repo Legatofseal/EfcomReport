@@ -52,11 +52,15 @@ public class EditModel(AppDbContext db, CurrentUserService currentUser, Submissi
             {
                 RequestItem.AttachmentOriginalName = replacement.OriginalName; RequestItem.AttachmentStorageName = replacement.StorageName;
                 RequestItem.AttachmentContentType = replacement.ContentType; RequestItem.AttachmentSize = replacement.Size;
+                RequestItem.AttachmentUploadedByName = user.DisplayName;
+                RequestItem.AttachmentUploadedByEmail = user.Email;
+                RequestItem.AttachmentUploadedAtUtc = DateTime.UtcNow;
             }
             else if (!isSickLeave || RemoveAttachment)
             {
                 RequestItem.AttachmentOriginalName = null; RequestItem.AttachmentStorageName = null;
                 RequestItem.AttachmentContentType = null; RequestItem.AttachmentSize = null;
+                RequestItem.AttachmentUploadedByName = null; RequestItem.AttachmentUploadedByEmail = null; RequestItem.AttachmentUploadedAtUtc = null;
             }
             await db.SaveChangesAsync();
             if (oldStorageName is not null && (replacement is not null || !isSickLeave || RemoveAttachment)) attachments.Delete(oldStorageName);

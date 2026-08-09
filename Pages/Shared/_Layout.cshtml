@@ -14,9 +14,12 @@
             <a class="navbar-brand" asp-page="/Index"><img class="site-logo" src="~/images/efcom-logo.png" alt="EfcomReport" /></a>
             <ul class="navbar-nav flex-row align-items-center gap-2">
                 <li class="nav-item language-switcher">
-                    <span class="nav-link text-muted">@T.Get(Context, "Language"):</span>
-                    <a class="nav-link" href="@T.LanguageUrl(Context, "en")">English</a>
-                    <a class="nav-link" href="@T.LanguageUrl(Context, "he")">עברית</a>
+                    <label class="nav-link text-muted mb-0" for="language-select">@T.Get(Context, "Language"):</label>
+                    <select id="language-select" class="form-select form-select-sm" onchange="if (this.value) window.location.href = this.value" aria-label="@T.Get(Context, "Language")">
+                        <option value="@T.LanguageUrl(Context, "en")" selected="@(T.Language(Context) == "en" ? "selected" : null)">English</option>
+                        <option value="@T.LanguageUrl(Context, "he")" selected="@(T.Language(Context) == "he" ? "selected" : null)">עברית</option>
+                        <option value="@T.LanguageUrl(Context, "ru")" selected="@(T.Language(Context) == "ru" ? "selected" : null)">Русский</option>
+                    </select>
                 </li>
                 @if (User.Identity?.IsAuthenticated == true)
                 {

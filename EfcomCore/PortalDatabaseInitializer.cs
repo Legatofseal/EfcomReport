@@ -91,6 +91,9 @@ public static class PortalDatabaseInitializer
         EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentStorageName", "TEXT NULL");
         EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentContentType", "TEXT NULL");
         EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentSize", "INTEGER NULL");
+        EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentUploadedByName", "TEXT NULL");
+        EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentUploadedByEmail", "TEXT NULL");
+        EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentUploadedAtUtc", "TEXT NULL");
         EnsureSqliteColumn(db, "MonthlySubmissions", "IsConfirmed", "INTEGER NOT NULL DEFAULT 0");
         EnsureSqliteColumn(db, "MonthlySubmissions", "ConfirmedAtUtc", "TEXT NULL");
         EnsureSqliteColumn(db, "InvoiceEntries", "IsPlaceholder", "INTEGER NOT NULL DEFAULT 0");
