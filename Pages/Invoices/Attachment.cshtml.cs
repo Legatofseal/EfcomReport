@@ -13,7 +13,7 @@ public sealed class AttachmentModel(AppDbContext db, CurrentUserService currentU
         var user = await currentUser.GetAsync(User);
         var entry = await db.InvoiceEntries.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
         if (entry is null) return NotFound();
-        if (user is null || (user.Role != "Admin" && !string.Equals(user.Email, entry.SubmittedByEmail, StringComparison.OrdinalIgnoreCase)))
+        if (user is null || user.Role != "Admin")
             return Forbid();
 
         var path = attachments.GetInvoicePath(entry.AttachmentStorageName);

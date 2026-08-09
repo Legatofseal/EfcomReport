@@ -16,10 +16,9 @@ public sealed class IndexModel(AppDbContext db, CurrentUserService currentUser) 
     {
         var user = await currentUser.GetAsync(User);
         if (user is null) return Forbid();
+        if (user.Role != "Admin") return Forbid();
 
         var query = db.InvoiceEntries.AsNoTracking();
-        if (user.Role != "Admin")
-            query = query.Where(x => x.SubmittedByEmail == user.Email);
 
         Entries = await query
             .OrderByDescending(x => x.CreatedAtUtc)

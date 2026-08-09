@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.Http;
 
 namespace EfcomReport.Services;
@@ -58,7 +59,18 @@ public sealed class UiText
 
     public string Language(IHttpContextAccessor context) => Normalize(context.HttpContext?.Request.Cookies[LanguageCookieName]);
     public string Direction(IHttpContextAccessor context) => Language(context) == "he" ? "rtl" : "ltr";
-    public string Get(IHttpContextAccessor context, string value) => Language(context) == "he" && (Hebrew.TryGetValue(value, out var translation) || AdditionalHebrew.TryGetValue(value, out translation)) ? translation : value;
+    public string Get(IHttpContextAccessor context, string value)
+    {
+        if (Language(context) != "he") return value;
+        if (!Hebrew.TryGetValue(value, out var translation) && !AdditionalHebrew.TryGetValue(value, out translation))
+            return value;
+        return DecodeUnicodeEscapes(translation);
+    }
+
+    private static string DecodeUnicodeEscapes(string value) =>
+        Regex.Replace(value, @"\\u([0-9a-fA-F]{4})", match =>
+            ((char)int.Parse(match.Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture)).ToString(),
+            RegexOptions.CultureInvariant);
 
     public string MonthName(IHttpContextAccessor context, int month)
     {

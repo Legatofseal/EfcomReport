@@ -16,7 +16,7 @@
                 <li class="nav-item language-switcher">
                     <span class="nav-link text-muted">@T.Get(Context, "Language"):</span>
                     <a class="nav-link" href="@T.LanguageUrl(Context, "en")">English</a>
-                    <a class="nav-link" href="@T.LanguageUrl(Context, "he")">×¢×‘×¨×™×ª</a>
+                    <a class="nav-link" href="@T.LanguageUrl(Context, "he")">עברית</a>
                 </li>
                 @if (User.Identity?.IsAuthenticated == true)
                 {
@@ -41,7 +41,10 @@
             <a class="sidebar-link" asp-page="/Calendar">@T.Get(Context, "Work calendar")</a>
 
             <div class="sidebar-heading mt-4">@T.Get(Context, "Invoices")</div>
-            <a class="sidebar-link" href="/Invoices/">@T.Get(Context, "Invoice entries")</a>
+            @if (User.IsInRole("Admin"))
+            {
+                <a class="sidebar-link" href="/Invoices/">@T.Get(Context, "Invoice entries")</a>
+            }
             <a class="sidebar-link" asp-page="/Invoices/Create">@T.Get(Context, "New invoice entry")</a>
 
             @if (User.IsInRole("Admin"))

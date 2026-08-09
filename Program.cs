@@ -11,6 +11,8 @@ builder.Services.AddRazorPages(options =>
     options.Conventions.AuthorizeFolder("/Requests");
     options.Conventions.AuthorizeFolder("/Admin", "Admin");
     options.Conventions.AuthorizeFolder("/Invoices");
+    options.Conventions.AuthorizePage("/Invoices/Index", "Admin");
+    options.Conventions.AuthorizePage("/Invoices/Attachment", "Admin");
 });
 
 var app = builder.Build();

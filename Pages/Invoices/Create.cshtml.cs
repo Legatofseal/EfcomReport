@@ -114,7 +114,9 @@ public sealed class CreateModel(
         TempData["Message"] = result.EmailSent
             ? $"{savedMessage} and email sent."
             : $"{savedMessage}, but email was not sent. Check the email configuration or the entry history.";
-        return RedirectToPage("/Invoices/Index");
+        return User.IsInRole("Admin")
+            ? RedirectToPage("/Invoices/Index")
+            : RedirectToPage("/Invoices/Create");
     }
 
     private async Task LoadRecipientsAsync()
