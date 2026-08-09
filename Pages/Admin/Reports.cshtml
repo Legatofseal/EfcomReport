@@ -9,7 +9,7 @@
         <div class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">@T.Get(Context, "Start month")</label>
-                <select class="form-select" name="startMonth">
+                <select class="form-select" name="startMonth" onchange="this.form.submit()">
                     @for (var month = 1; month <= 12; month++)
                     {
                         <option value="@month" selected="@(Model.CurrentStartMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option>
@@ -18,11 +18,11 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">@T.Get(Context, "Start year")</label>
-                <input class="form-control" type="number" name="startYear" min="2020" max="2100" value="@Model.CurrentStartYear" />
+                <input class="form-control" type="number" name="startYear" min="2020" max="2100" value="@Model.CurrentStartYear" onchange="this.form.submit()" />
             </div>
             <div class="col-md-3">
                 <label class="form-label">@T.Get(Context, "End month")</label>
-                <select class="form-select" name="endMonth">
+                <select class="form-select" name="endMonth" onchange="this.form.submit()">
                     @for (var month = 1; month <= 12; month++)
                     {
                         <option value="@month" selected="@(Model.CurrentEndMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option>
@@ -31,7 +31,7 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">@T.Get(Context, "End year")</label>
-                <input class="form-control" type="number" name="endYear" min="2020" max="2100" value="@Model.CurrentEndYear" />
+                <input class="form-control" type="number" name="endYear" min="2020" max="2100" value="@Model.CurrentEndYear" onchange="this.form.submit()" />
             </div>
             <div class="col-md-2">
                 <button class="btn btn-primary w-100" type="submit">@T.Get(Context, "Apply filters")</button>
