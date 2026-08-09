@@ -3,6 +3,8 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Text;
 using System.Text.RegularExpressions;
+using UglyToad.PdfPig;
+using UglyToad.PdfPig.DocumentLayoutAnalysis.WordExtractor;
 
 namespace EfcomReport.Services;
 
@@ -95,6 +97,9 @@ public sealed class InvoiceExtractionService(
         List<string> warnings,
         CancellationToken cancellationToken)
     {
+        var managedText = TryExtractManagedPdfText(inputPath);
+        if (!string.IsNullOrWhiteSpace(managedText)) return managedText;
+
         var textPath = Path.Combine(temporaryDirectory, "extracted.txt");
         var textResult = await RunCommandAsync(
             ToolPath("InvoiceExtraction:PdfToTextPath", "pdftotext"),
@@ -140,6 +145,52 @@ public sealed class InvoiceExtractionService(
         return string.Join(Environment.NewLine, textParts);
     }
 
+    private string? TryExtractManagedPdfText(string inputPath)
+    {
+        try
+        {
+            using var document = PdfDocument.Open(inputPath);
+            var text = string.Join(
+                Environment.NewLine,
+                document.GetPages().Select(ExtractManagedPdfPageText));
+            return string.IsNullOrWhiteSpace(text) ? null : text;
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Managed PDF text extraction failed for {InputPath}", inputPath);
+            return null;
+        }
+    }
+
+    private static string ExtractManagedPdfPageText(UglyToad.PdfPig.Content.Page page)
+    {
+        var lines = new List<(double Y, List<string> Words)>();
+        foreach (var word in page.GetWords(NearestNeighbourWordExtractor.Instance))
+        {
+            if (string.IsNullOrWhiteSpace(word.Text)) continue;
+
+            var y = word.BoundingBox.BottomLeft.Y;
+            var lineIndex = lines.FindIndex(x => Math.Abs(x.Y - y) <= 2.5);
+            if (lineIndex < 0)
+                lines.Add((y, [NormalizeManagedPdfWord(word.Text)]));
+            else
+                lines[lineIndex].Words.Add(NormalizeManagedPdfWord(word.Text));
+        }
+
+        return string.Join(
+            Environment.NewLine,
+            lines
+                .OrderByDescending(x => x.Y)
+                .Select(x => string.Join(' ', x.Words)));
+    }
+
+    private static string NormalizeManagedPdfWord(string value) =>
+        Regex.Replace(
+            value,
+            "[\\u0590-\\u05FF\\\"׳״']+",
+            match => new string(match.Value.Reverse().ToArray()),
+            RegexOptions.CultureInvariant);
+
     private async Task<string> ExtractImageTextAsync(
         string inputPath,
         List<string> warnings,
@@ -164,7 +215,7 @@ public sealed class InvoiceExtractionService(
 
     private InvoiceExtractionResult Parse(string text, string source, List<string> warnings)
     {
-        var customer = ExtractLabeledValue(text, CustomerLabels);
+        var customer = NormalizeCustomerName(ExtractLabeledValue(text, CustomerLabels));
         var invoiceNumber = ExtractInvoiceNumber(text);
         var money = ExtractTotalMoney(text);
         var currency = money.Currency ?? FindCurrency(text);
@@ -206,7 +257,10 @@ public sealed class InvoiceExtractionService(
             var score = ContainsAny(line,
                 "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA \u05DE\u05E1",
                 "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA \u05DE\u05E1\u05E4\u05E8",
-                "Invoice Number", "Invoice No", "Invoice #") ? 120 : 100;
+                "Invoice Number", "Invoice No", "Invoice #") ||
+                (ContainsAny(line, "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA") && ContainsAny(line, "\u05DE\u05E1"))
+                ? 120
+                : 100;
             if (ContainsAny(line, "\u05E4\u05EA\u05E7 \u05D4\u05D7\u05DC\u05E4\u05D4", "replacement")) score -= 20;
 
             foreach (Match match in Regex.Matches(line, @"(?<![\d./])\d{4,12}(?![\d./])", RegexOptions.CultureInvariant))
@@ -227,6 +281,21 @@ public sealed class InvoiceExtractionService(
         for (var index = 0; index < lines.Count; index++)
         {
             var line = lines[index];
+            foreach (var label in labels.OrderByDescending(x => x.Length))
+            {
+                var labelIndex = line.IndexOf(label, StringComparison.OrdinalIgnoreCase);
+                if (labelIndex < 0) continue;
+                var prefix = line[..labelIndex].Trim();
+                if (prefix.Length > 0 && prefix.Any(character => !":#-;|".Contains(character)))
+                    continue;
+
+                var afterLabel = line[(labelIndex + label.Length)..]
+                    .TrimStart(' ', '\t', ':', '#', '-', ';', '|');
+                var directValue = CleanValue(afterLabel);
+                if (directValue is not null && !LooksLikeAnotherLabel(directValue))
+                    return directValue;
+            }
+
             var inline = Regex.Match(line,
                 $"(?i)(?:^|\\s)(?:{labelPattern})\\s*(?:number|no\\.?|#)?\\s*[:#\\-]\\s*(?<value>.+)$",
                 RegexOptions.CultureInvariant);
@@ -302,6 +371,15 @@ public sealed class InvoiceExtractionService(
             }
         }
 
+        foreach (var line in Lines(text))
+        {
+            if (!ContainsAny(line, "Diners", "Visa", "Mastercard", "American Express", "\u05D0\u05E9\u05E8\u05D0\u05D9", "\u05DB\u05E8\u05D8\u05D9\u05E1"))
+                continue;
+
+            var cardMatch = Regex.Match(line, @"(?i)(?:Diners|Visa|Mastercard|American\s+Express)[^\d]{0,8}(?<digits>\d{4})");
+            if (cardMatch.Success) return cardMatch.Groups["digits"].Value;
+        }
+
         return ExtractLabeledValue(text, PaymentLabels);
     }
 
@@ -313,6 +391,11 @@ public sealed class InvoiceExtractionService(
         foreach (var line in Lines(text))
         {
             if (LooksLikeHeader(line)) continue;
+            var product = Regex.Match(line,
+                @"(?<value>[A-Za-z][A-Za-z0-9'’ ._-]*\b(?:basketball|ball)\b)",
+                RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+            if (product.Success) return CleanDescription(product.Groups["value"].Value);
+
             if (!Regex.IsMatch(line, @"(?i)\b(?:basketball|ball)\b", RegexOptions.CultureInvariant) &&
                 !Regex.IsMatch(line, @"^\d+\s+.+\s+\d{8,}$", RegexOptions.CultureInvariant)) continue;
 
@@ -372,6 +455,17 @@ public sealed class InvoiceExtractionService(
             "ILS" or "NIS" => "\u20AA",
             _ => match.Value
         };
+    }
+
+    private static string? NormalizeCustomerName(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value)) return value;
+        value = value.Trim();
+        if (value.StartsWith("בעמ ", StringComparison.Ordinal))
+            return $"{value[4..]} בעמ";
+        if (value.StartsWith("בע\"מ ", StringComparison.Ordinal))
+            return $"{value[5..]} בע\"מ";
+        return value;
     }
 
     private string ToolPath(string key, string defaultValue) =>
@@ -442,7 +536,9 @@ public sealed class InvoiceExtractionService(
         value.EndsWith(':') || ContainsAny(value, "Invoice", "Customer", "Client", "Total", "\u05D7\u05E9\u05D1\u05D5\u05E0\u05D9\u05EA", "\u05DC\u05E7\u05D5\u05D7", "\u05E1\u05D4\u0022\u05DB");
 
     private static bool LooksLikeHeader(string value) =>
-        ContainsAny(value, "\u05EA\u05D9\u05D0\u05D5\u05E8", "Description", "Item description") && value.Length < 80;
+        value.Length < 120 &&
+        (ContainsAny(value, "\u05EA\u05D9\u05D0\u05D5\u05E8", "Description", "Item description", "\u05DB\u05DE\u05D5\u05EA", "Quantity", "\u05DE\u05D7\u05D9\u05E8", "Price") ||
+         value.Contains('#', StringComparison.Ordinal));
 
     private static string? CleanValue(string value)
     {
@@ -462,7 +558,7 @@ public sealed class InvoiceExtractionService(
 
     private static int AmountLabelScore(string line)
     {
-        if (ContainsAny(line, "\u05E1\u05D4\u0022\u05DB \u05DC\u05EA\u05E9\u05DC\u05D5\u05DD", "Total Due", "Amount Due", "Balance Due")) return 130;
+        if (ContainsAny(line, "\u05E1\u05D4\u0022\u05DB \u05DC\u05EA\u05E9\u05DC\u05D5\u05DD", "\u05DC\u05EA\u05E9\u05DC\u05D5\u05DD \u05E1\u05D4\u0022\u05DB", "Total Due", "Amount Due", "Balance Due")) return 130;
         if (ContainsAny(line, "\u05E1\u05DB\u05D5\u05DD \u05DB\u05D5\u05DC\u05DC", "Grand Total", "Total Amount")) return 120;
         if (ContainsAny(line, "\u05E1\u05D4\u0022\u05DB \u05D0\u05E9\u05E8\u05D0\u05D9", "\u05E1\u05DA \u05D4\u05DB\u05DC", "Total")) return 100;
         if (ContainsAny(line, "\u05E1\u05D4\u0022\u05DB", "\u05E1\u05D4\u05F4\u05DB", "\u05DC\u05EA\u05E9\u05DC\u05D5\u05DD")) return 80;

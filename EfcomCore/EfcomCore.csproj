@@ -10,6 +10,7 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.2" />
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.12" />
+    <PackageReference Include="PdfPig" Version="0.1.15" />
   </ItemGroup>
 
   <ItemGroup>
