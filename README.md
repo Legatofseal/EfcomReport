@@ -15,7 +15,7 @@ Small monolithic ASP.NET Core Razor Pages application for employee leave trackin
 - Reports default to all active employees for the last completed month; administrators can select employees and a start/end month range. CSV downloads and emailed reports use the same filters.
 - CSV download and optional SMTP report delivery.
 - Monthly reminder worker plus a manual local test button.
-- Admin can send a targeted monthly submission request to one employee by email.
+- Admin can send monthly submission requests to multiple selected employees by email; employees who have not submitted for the selected month are selected by default.
 - Admins can invite another Google account as an administrator from **Employees and settings**. If SMTP is configured, the invitation includes the sign-in link.
 - Sick Leave requests can optionally include a PDF, JPG or PNG document up to 10 MB; only the employee and administrators can download it.
 - All authenticated users can view the read-only work calendar; only administrators can change calendar days.
