@@ -1,0 +1,64 @@
+@page
+@model EfcomReport.Pages.Invoices.IndexModel
+@{ ViewData["Title"] = T.Get(Context, "Invoice entries"); }
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1>@T.Get(Context, "Invoice entries")</h1>
+        <p class="text-muted mb-0">@T.Get(Context, Model.IsAdmin ? "All submitted invoice entries." : "Your submitted invoice entries.")</p>
+    </div>
+    <a class="btn btn-primary" asp-page="/Invoices/Create">@T.Get(Context, "New invoice entry")</a>
+</div>
+
+@if (Model.Entries.Count == 0)
+{
+    <p class="text-muted">@T.Get(Context, "No invoice entries yet.")</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>@T.Get(Context, "Date")</th>
+                    <th>@T.Get(Context, "Customer")</th>
+                    <th>@T.Get(Context, "Invoice number")</th>
+                    <th>@T.Get(Context, "Amount")</th>
+                    <th>@T.Get(Context, "Payment type")</th>
+                    @if (Model.IsAdmin) { <th>@T.Get(Context, "Submitted by")</th> }
+                    <th>@T.Get(Context, "Email")</th>
+                    <th>@T.Get(Context, "Document")</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var entry in Model.Entries)
+            {
+                <tr>
+                    <td>@entry.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@entry.Customer</td>
+                    <td>@entry.InvoiceNumber</td>
+                    <td>@entry.CurrencySymbol@entry.Amount.ToString("0.##")</td>
+                    <td>@entry.PaymentType</td>
+                    @if (Model.IsAdmin) { <td>@entry.SubmittedByEmail</td> }
+                    <td>
+                        @if (entry.EmailSentAtUtc.HasValue)
+                        {
+                            <span class="badge text-bg-success">@T.Get(Context, "Sent")</span>
+                        }
+                        else
+                        {
+                            <span class="badge text-bg-warning">@T.Get(Context, "Saved; email not sent")</span>
+                        }
+                    </td>
+                    <td>
+                        @if (entry.AttachmentOriginalName is not null)
+                        {
+                            <a asp-page="/Invoices/Attachment" asp-route-id="@entry.Id">@T.Get(Context, "Download")</a>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

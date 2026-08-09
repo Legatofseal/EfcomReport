@@ -97,3 +97,23 @@ public sealed class ReportRequest
     public string SentToEmail { get; set; } = "";
     public DateTime RequestedAtUtc { get; set; } = DateTime.UtcNow;
 }
+
+public sealed class InvoiceEntry
+{
+    public int Id { get; set; }
+    public string SubmittedByEmail { get; set; } = "";
+    public string RecipientEmail { get; set; } = "";
+    public string Customer { get; set; } = "";
+    public string InvoiceNumber { get; set; } = "";
+    public string CurrencySymbol { get; set; } = "";
+    public decimal Amount { get; set; }
+    public string PaymentType { get; set; } = "";
+    public string? Comments { get; set; }
+    public string? AttachmentOriginalName { get; set; }
+    public string? AttachmentStorageName { get; set; }
+    public string? AttachmentContentType { get; set; }
+    public long? AttachmentSize { get; set; }
+    public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
+    public DateTime? EmailSentAtUtc { get; set; }
+    public string? EmailError { get; set; }
+}

@@ -106,12 +106,24 @@ public sealed class AttachmentService(IConfiguration configuration)
 
     public async Task<StoredAttachment> SaveAsync(IFormFile file, CancellationToken cancellationToken = default)
     {
+        return await SaveToAsync(file, RootPath, cancellationToken);
+    }
+
+    public async Task<StoredAttachment> SaveInvoiceAsync(IFormFile file, CancellationToken cancellationToken = default)
+    {
+        return await SaveToAsync(file, InvoiceRootPath, cancellationToken);
+    }
+
+    public string InvoiceRootPath => Path.Combine(RootPath, "invoices");
+
+    private async Task<StoredAttachment> SaveToAsync(IFormFile file, string targetRoot, CancellationToken cancellationToken)
+    {
         var validationError = Validate(file);
         if (validationError is not null) throw new InvalidOperationException(validationError);
-        Directory.CreateDirectory(RootPath);
+        Directory.CreateDirectory(targetRoot);
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         var storageName = $"{Guid.NewGuid():N}{extension}";
-        var path = Path.Combine(RootPath, storageName);
+        var path = Path.Combine(targetRoot, storageName);
         await using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
         await file.CopyToAsync(stream, cancellationToken);
         var contentType = extension switch
@@ -127,15 +139,31 @@ public sealed class AttachmentService(IConfiguration configuration)
 
     public string? GetPath(string? storageName)
     {
+        return GetPathInRoot(storageName, RootPath);
+    }
+
+    public string? GetInvoicePath(string? storageName)
+    {
+        return GetPathInRoot(storageName, InvoiceRootPath);
+    }
+
+    private static string? GetPathInRoot(string? storageName, string rootPath)
+    {
         if (string.IsNullOrWhiteSpace(storageName) || storageName != Path.GetFileName(storageName)) return null;
-        var path = Path.GetFullPath(Path.Combine(RootPath, storageName));
-        var root = Path.GetFullPath(RootPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+        var path = Path.GetFullPath(Path.Combine(rootPath, storageName));
+        var root = Path.GetFullPath(rootPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
         return path.StartsWith(root, StringComparison.OrdinalIgnoreCase) ? path : null;
     }
 
     public void Delete(string? storageName)
     {
         var path = GetPath(storageName);
+        if (path is not null && File.Exists(path)) File.Delete(path);
+    }
+
+    public void DeleteInvoice(string? storageName)
+    {
+        var path = GetInvoicePath(storageName);
         if (path is not null && File.Exists(path)) File.Delete(path);
     }
 }
@@ -281,6 +309,12 @@ public sealed class EmailService(IConfiguration configuration, ILogger<EmailServ
 
     public async Task SendAsync(IEnumerable<string> recipients, string subject, string body, byte[]? attachment = null, string? attachmentName = null)
     {
+        await SendDocumentAsync(recipients, subject, body, attachment, attachmentName, "text/csv");
+    }
+
+    public async Task SendDocumentAsync(IEnumerable<string> recipients, string subject, string body,
+        byte[]? attachment = null, string? attachmentName = null, string? attachmentContentType = null)
+    {
         var host = configuration["Email:SmtpHost"];
         var from = configuration["Email:From"];
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(from))
@@ -290,7 +324,7 @@ public sealed class EmailService(IConfiguration configuration, ILogger<EmailServ
         foreach (var recipient in recipients.Where(x => !string.IsNullOrWhiteSpace(x)).Distinct(StringComparer.OrdinalIgnoreCase))
             message.To.Add(recipient);
         if (attachment is not null && !string.IsNullOrWhiteSpace(attachmentName))
-            message.Attachments.Add(new Attachment(new MemoryStream(attachment), attachmentName, "text/csv"));
+            message.Attachments.Add(new Attachment(new MemoryStream(attachment), attachmentName, attachmentContentType ?? "application/octet-stream"));
 
         using var client = new SmtpClient(host, int.TryParse(configuration["Email:SmtpPort"], out var port) ? port : 587)
         {

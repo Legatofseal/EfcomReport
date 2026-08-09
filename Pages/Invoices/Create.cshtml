@@ -1,0 +1,125 @@
+@page
+@model EfcomReport.Pages.Invoices.CreateModel
+@{ ViewData["Title"] = T.Get(Context, "New invoice entry"); }
+
+<h1>@T.Get(Context, "New invoice entry")</h1>
+<p class="text-muted">@T.Get(Context, "Submit an invoice entry and send it by email with its document.")</p>
+
+<form method="post" enctype="multipart/form-data" class="row g-3">
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <div class="col-md-6">
+        <label asp-for="RecipientEmail" class="form-label">@T.Get(Context, "Recipient email")</label>
+        <input asp-for="RecipientEmail" class="form-control" type="email" />
+        <span asp-validation-for="RecipientEmail" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Customer" class="form-label">@T.Get(Context, "Customer")</label>
+        <input asp-for="Customer" class="form-control" />
+        <span asp-validation-for="Customer" class="text-danger"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="InvoiceNumber" class="form-label">@T.Get(Context, "Invoice number")</label>
+        <input asp-for="InvoiceNumber" class="form-control" />
+        <span asp-validation-for="InvoiceNumber" class="text-danger"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="CurrencySymbol" class="form-label">@T.Get(Context, "Currency symbol")</label>
+        <input asp-for="CurrencySymbol" class="form-control" placeholder="$" />
+        <span asp-validation-for="CurrencySymbol" class="text-danger"></span>
+    </div>
+    <div class="col-md-4">
+        <label asp-for="Amount" class="form-label">@T.Get(Context, "Amount")</label>
+        <input asp-for="Amount" class="form-control" type="number" min="0.01" step="0.01" />
+        <span asp-validation-for="Amount" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="PaymentType" class="form-label">@T.Get(Context, "Payment type")</label>
+        <input asp-for="PaymentType" class="form-control" placeholder="Bank transfer, card..." />
+        <span asp-validation-for="PaymentType" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Attachment" class="form-label">@T.Get(Context, "Invoice document") <span class="text-muted">(@T.Get(Context, "optional"))</span></label>
+        <input asp-for="Attachment" class="form-control" type="file" accept=".pdf,.jpg,.jpeg,.png" />
+        <div class="form-text">@T.Get(Context, "PDF, JPG or PNG, up to 10 MB.")</div>
+        <span asp-validation-for="Attachment" class="text-danger"></span>
+        <div class="mt-2 d-flex align-items-center gap-2">
+            <button id="try-extraction" class="btn btn-outline-primary btn-sm" type="button">@T.Get(Context, "Try to fill from document")</button>
+            <span id="extraction-status" class="small text-muted"></span>
+        </div>
+        <ul id="extraction-warnings" class="small text-warning mb-0 mt-2"></ul>
+    </div>
+    <div class="col-12">
+        <label asp-for="Comments" class="form-label">@T.Get(Context, "Comments")</label>
+        <textarea asp-for="Comments" class="form-control" rows="4"></textarea>
+        <span asp-validation-for="Comments" class="text-danger"></span>
+    </div>
+    <div class="col-12 d-flex gap-2">
+        <button class="btn btn-primary" type="submit">@T.Get(Context, "Submit invoice")</button>
+        <a class="btn btn-outline-secondary" asp-page="/Invoices/Index">@T.Get(Context, "Cancel")</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const button = document.getElementById('try-extraction');
+            const fileInput = document.getElementById('Attachment');
+            const status = document.getElementById('extraction-status');
+            const warnings = document.getElementById('extraction-warnings');
+            const form = button?.closest('form');
+            if (!button || !fileInput || !status || !warnings || !form) return;
+
+            button.addEventListener('click', async () => {
+                const file = fileInput.files?.[0];
+                if (!file) {
+                    status.textContent = 'Choose a document first.';
+                    status.className = 'small text-danger';
+                    return;
+                }
+
+                button.disabled = true;
+                status.textContent = 'Reading document...';
+                status.className = 'small text-muted';
+                warnings.replaceChildren();
+                try {
+                    const data = new FormData();
+                    data.append('attachment', file);
+                    const token = form.querySelector('input[name="__RequestVerificationToken"]')?.value;
+                    const response = await fetch('?handler=Extract', {
+                        method: 'POST',
+                        body: data,
+                        headers: token ? { 'RequestVerificationToken': token } : {}
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.message || 'Document extraction failed.');
+
+                    const fields = [
+                        ['Customer', result.customer],
+                        ['InvoiceNumber', result.invoiceNumber],
+                        ['CurrencySymbol', result.currencySymbol],
+                        ['Amount', result.amount]
+                    ];
+                    for (const [name, value] of fields) {
+                        if (value !== null && value !== undefined && value !== '') {
+                            const input = document.getElementById(name);
+                            if (input) input.value = value;
+                        }
+                    }
+                    status.textContent = result.message || 'Fields filled. Check them before submitting.';
+                    status.className = 'small text-success';
+                    for (const warning of (result.warnings || [])) {
+                        const item = document.createElement('li');
+                        item.textContent = warning;
+                        warnings.appendChild(item);
+                    }
+                } catch (error) {
+                    status.textContent = error instanceof Error ? error.message : 'Document extraction failed.';
+                    status.className = 'small text-danger';
+                } finally {
+                    button.disabled = false;
+                }
+            });
+        })();
+    </script>
+}

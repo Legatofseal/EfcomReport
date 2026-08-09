@@ -17,6 +17,8 @@ builder.Services.AddScoped<WorkCalendarService>();
 builder.Services.AddScoped<SubmissionService>();
 builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<EmailService>();
+builder.Services.AddScoped<InvoiceService>();
+builder.Services.AddScoped<InvoiceExtractionService>();
 builder.Services.AddScoped<ReminderService>();
 builder.Services.AddScoped<AttachmentService>();
 builder.Services.AddSingleton<UiText>();
@@ -25,6 +27,7 @@ builder.Services.AddHostedService<ReminderWorker>();
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizeFolder("/Requests");
+    options.Conventions.AuthorizeFolder("/Invoices");
     options.Conventions.AuthorizeFolder("/Admin", "Admin");
 });
 builder.Services.AddAuthorization(options => options.AddPolicy("Admin", policy => policy.RequireRole("Admin")));
@@ -121,6 +124,28 @@ using (var scope = app.Services.CreateScope())
             );
             CREATE INDEX IF NOT EXISTS "IX_ReportRequests_EmployeeId_Year_Month"
             ON "ReportRequests" ("EmployeeId", "Year", "Month");
+            CREATE TABLE IF NOT EXISTS "InvoiceEntries" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_InvoiceEntries" PRIMARY KEY AUTOINCREMENT,
+                "SubmittedByEmail" TEXT NOT NULL,
+                "RecipientEmail" TEXT NOT NULL,
+                "Customer" TEXT NOT NULL,
+                "InvoiceNumber" TEXT NOT NULL,
+                "CurrencySymbol" TEXT NOT NULL,
+                "Amount" TEXT NOT NULL,
+                "PaymentType" TEXT NOT NULL,
+                "Comments" TEXT NULL,
+                "AttachmentOriginalName" TEXT NULL,
+                "AttachmentStorageName" TEXT NULL,
+                "AttachmentContentType" TEXT NULL,
+                "AttachmentSize" INTEGER NULL,
+                "CreatedAtUtc" TEXT NOT NULL,
+                "EmailSentAtUtc" TEXT NULL,
+                "EmailError" TEXT NULL
+            );
+            CREATE INDEX IF NOT EXISTS "IX_InvoiceEntries_CreatedAtUtc"
+            ON "InvoiceEntries" ("CreatedAtUtc");
+            CREATE INDEX IF NOT EXISTS "IX_InvoiceEntries_InvoiceNumber"
+            ON "InvoiceEntries" ("InvoiceNumber");
             """);
         EnsureSqliteColumn(db, "AttachmentOriginalName", "TEXT NULL");
         EnsureSqliteColumn(db, "AttachmentStorageName", "TEXT NULL");

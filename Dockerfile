@@ -8,6 +8,9 @@ RUN dotnet publish "EfcomReport.csproj" -c Release -o /app/publish /p:UseAppHost
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends poppler-utils tesseract-ocr tesseract-ocr-eng tesseract-ocr-heb tesseract-ocr-rus \
+    && rm -rf /var/lib/apt/lists/*
 # Azure App Service persists /home when WEBSITES_ENABLE_APP_SERVICE_STORAGE=true.
 # The database file is intentionally outside the image's writable layer.
 ENV ConnectionStrings__DefaultConnection="Data Source=/home/efcomreport.db"
