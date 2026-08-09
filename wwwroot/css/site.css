@@ -3,6 +3,9 @@ html { font-size: 14px; position: relative; min-height: 100%; }
 body { margin-bottom: 60px; background: #f8fafc; }
 .site-logo { display: block; width: auto; height: 38px; }
 .navbar-brand { display: inline-flex; align-items: center; padding-top: .25rem; padding-bottom: .25rem; }
+.language-switcher { display: flex; align-items: center; }
+.language-switcher .nav-link { padding-left: .35rem; padding-right: .35rem; }
+html[dir="rtl"] .language-switcher { direction: rtl; }
 .card { border: 1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(15,23,42,.04); }
 .form-card { max-width: 720px; background: white; border: 1px solid #e2e8f0; padding: 1.25rem; border-radius: .5rem; }
 .link-card { color: inherit; text-decoration: none; min-height: 140px; }

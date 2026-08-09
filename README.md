@@ -15,8 +15,10 @@ Small monolithic ASP.NET Core Razor Pages application for employee leave trackin
 - CSV download and optional SMTP report delivery.
 - Monthly reminder worker plus a manual local test button.
 - Admin can send a targeted monthly submission request to one employee by email.
+- Admins can invite another Google account as an administrator from **Employees and settings**. If SMTP is configured, the invitation includes the sign-in link.
 - Sick Leave requests can optionally include a PDF, JPG or PNG document up to 10 MB; only the employee and administrators can download it.
 - All authenticated users can view the read-only work calendar; only administrators can change calendar days.
+- The interface supports English and Hebrew. Only interface text is translated; employee names, emails, leave types and other entered data remain unchanged.
 
 ## Local run
 
@@ -28,7 +30,7 @@ dotnet run
 
 Open `http://localhost:5186/account/dev-login` for the local admin. The development login is disabled outside Development and must not be exposed publicly.
 
-The local database is `efcom.db`. It is intentionally created empty except for the three initial leave types: Vacation, Miluim and Sick Leave.
+The local database is `efcom.db`. It is intentionally created empty except for the three initial leave types: Vacation, Miluim and Sick Leave. Local uploaded documents are stored under the application `uploads` directory unless `FileStorage:RootPath` is configured.
 
 ## Google login
 
@@ -56,7 +58,7 @@ $env:Email__From = "leave-tracker@example.com"
 
 Set `App__PublicUrl` to the public app URL in Azure so targeted emails contain the correct link.
 
-Sick-leave documents are stored outside SQLite. On Linux/App Service the default path is `/home/efcomreport-uploads`, which is persistent when `WEBSITES_ENABLE_APP_SERVICE_STORAGE=true`. Set `FileStorage__RootPath` only if a different persistent path is required.
+On Azure, long-term application data is stored in the SQLite file `/home/efcomreport.db`. Sick-leave documents are stored outside SQLite under `/home/efcomreport-uploads`. Both locations use App Service persistent storage when `WEBSITES_ENABLE_APP_SERVICE_STORAGE=true`; the data is not stored in GitHub. This is persistent storage, not a backup, so configure App Service Backup and verify a restore before relying on it for accounting records. Set `FileStorage__RootPath` only if a different persistent path is required.
 
 The reminder worker checks the configured day of month (`Reminder:DayOfMonth`, default `1`). For Azure, a scheduled Azure job is preferable to relying on a background worker in a scaled-out web container.
 

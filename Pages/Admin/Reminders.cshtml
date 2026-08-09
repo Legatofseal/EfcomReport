@@ -1,8 +1,8 @@
 @page
 @model EfcomReport.Pages.Admin.RemindersModel
-@{ ViewData["Title"] = "Reminders"; }
-<h1>Monthly reminders</h1>
-<p>The background worker checks the configured day of month. Use this button to test the reminder run locally.</p>
+@{ ViewData["Title"] = T.Get(Context, "Reminders"); }
+<h1>@T.Get(Context, "Monthly reminders")</h1>
+<p>@T.Get(Context, "The background worker checks the configured day of month. Use this button to test the reminder run locally.")</p>
 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 @if (Model.Result is not null) { <div class="alert alert-info">@Model.Result</div> }
-<form method="post" asp-page-handler="RunNow"><button class="btn btn-primary">Run reminder check now</button></form>
+<form method="post" asp-page-handler="RunNow"><button class="btn btn-primary">@T.Get(Context, "Run reminder check now")</button></form>

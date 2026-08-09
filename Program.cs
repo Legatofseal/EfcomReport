@@ -19,6 +19,8 @@ builder.Services.AddScoped<ReportService>();
 builder.Services.AddScoped<EmailService>();
 builder.Services.AddScoped<ReminderService>();
 builder.Services.AddScoped<AttachmentService>();
+builder.Services.AddSingleton<UiText>();
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddHostedService<ReminderWorker>();
 builder.Services.AddRazorPages(options =>
 {
@@ -81,6 +83,20 @@ if (!app.Environment.IsDevelopment()) app.UseExceptionHandler("/Error");
 app.UseRouting();
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapGet("/language/set", (HttpContext http, string? language, string? returnUrl) =>
+{
+    var normalized = UiText.Normalize(language);
+    http.Response.Cookies.Append(UiText.LanguageCookieName, normalized, new CookieOptions
+    {
+        Expires = DateTimeOffset.UtcNow.AddYears(1),
+        IsEssential = true,
+        SameSite = SameSiteMode.Lax,
+        Secure = http.Request.IsHttps
+    });
+    var target = !string.IsNullOrWhiteSpace(returnUrl) && returnUrl.StartsWith('/') && !returnUrl.StartsWith("//") ? returnUrl : "/";
+    return Results.LocalRedirect(target);
+});
 
 using (var scope = app.Services.CreateScope())
 {
@@ -160,9 +176,9 @@ app.MapGet("/account/dev-login", async (HttpContext http, IConfiguration config,
     if (!app.Environment.IsDevelopment() || !config.GetValue<bool>("Authentication:EnableDevLogin")) return Results.NotFound();
     email ??= "admin@example.com"; name ??= email;
     var admins = (config["Authentication:AdminEmails"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-    var role = admins.Contains(email, StringComparer.OrdinalIgnoreCase) ? "Admin" : "User";
     var employee = await db.Employees.SingleOrDefaultAsync(x => x.Email == email);
     var user = await db.AppUsers.SingleOrDefaultAsync(x => x.Email == email);
+    var role = user?.Role == "Admin" || admins.Contains(email, StringComparer.OrdinalIgnoreCase) ? "Admin" : "User";
     if (user is null) db.AppUsers.Add(new AppUser { Email = email, DisplayName = name, EmployeeId = employee?.Id, Role = role });
     else { user.DisplayName = name; user.EmployeeId = employee?.Id; user.Role = role; user.LastSeenAtUtc = DateTime.UtcNow; }
     await db.SaveChangesAsync();

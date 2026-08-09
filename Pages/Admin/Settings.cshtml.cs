@@ -1,19 +1,23 @@
 using System.ComponentModel.DataAnnotations;
 using EfcomReport.Data;
 using EfcomReport.Models;
+using EfcomReport.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
 namespace EfcomReport.Pages.Admin;
 
-public class SettingsModel(AppDbContext db) : PageModel
+public class SettingsModel(AppDbContext db, EmailService email, IConfiguration configuration, CurrentUserService currentUser) : PageModel
 {
     public List<Employee> Employees { get; private set; } = [];
+    public List<AppUser> Administrators { get; private set; } = [];
     public List<LeaveType> LeaveTypes { get; private set; } = [];
     public List<ReportRecipient> Recipients { get; private set; } = [];
     [BindProperty] public string? EmployeeName { get; set; }
     [BindProperty, EmailAddress] public string? EmployeeEmail { get; set; }
+    [BindProperty] public string? AdministratorName { get; set; }
+    [BindProperty, EmailAddress] public string? AdministratorEmail { get; set; }
     [BindProperty] public string? LeaveTypeName { get; set; }
     [BindProperty, EmailAddress] public string? RecipientEmail { get; set; }
 
@@ -40,6 +44,63 @@ public class SettingsModel(AppDbContext db) : PageModel
     public async Task<IActionResult> OnPostToggleEmployeeAsync(int id)
     {
         var employee = await db.Employees.FindAsync(id); if (employee is null) return NotFound(); employee.IsActive = !employee.IsActive; await db.SaveChangesAsync(); return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostAddAdministratorAsync()
+    {
+        var name = (AdministratorName ?? "").Trim();
+        var emailAddress = (AdministratorEmail ?? "").Trim().ToLowerInvariant();
+        ModelState.Remove(nameof(AdministratorName));
+        ModelState.Remove(nameof(AdministratorEmail));
+        if (!new EmailAddressAttribute().IsValid(emailAddress)) ModelState.AddModelError(nameof(AdministratorEmail), "Enter a valid email.");
+        if (!ModelState.IsValid) { await LoadAsync(); return Page(); }
+
+        var user = await db.AppUsers.SingleOrDefaultAsync(x => x.Email == emailAddress);
+        if (user is null)
+        {
+            user = new AppUser { Email = emailAddress, DisplayName = string.IsNullOrWhiteSpace(name) ? emailAddress : name, Role = "Admin" };
+            db.AppUsers.Add(user);
+        }
+        else
+        {
+            if (!string.IsNullOrWhiteSpace(name)) user.DisplayName = name;
+            user.Role = "Admin";
+            user.IsActive = true;
+        }
+        await db.SaveChangesAsync();
+
+        if (!email.IsConfigured)
+        {
+            TempData["Message"] = "Administrator added. SMTP is not configured, so no invitation email was sent.";
+            return RedirectToPage();
+        }
+
+        var publicUrl = (configuration["App:PublicUrl"] ?? "http://localhost:5186").TrimEnd('/');
+        try
+        {
+            await email.SendAsync([emailAddress], "EfcomReport administrator invitation", $"Hello {name},\n\nYou have been invited as an administrator for EfcomReport.\n\nSign in here: {publicUrl}/account/login");
+            TempData["Message"] = $"Administrator added and invitation sent to {emailAddress}.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Message"] = $"Administrator added, but the invitation email could not be sent: {ex.Message}";
+        }
+        return RedirectToPage();
+    }
+
+    public async Task<IActionResult> OnPostToggleAdministratorAsync(int id)
+    {
+        var admin = await db.AppUsers.SingleOrDefaultAsync(x => x.Id == id && x.Role == "Admin");
+        if (admin is null) return NotFound();
+        var currentEmail = currentUser.Email(User);
+        if (string.Equals(admin.Email, currentEmail, StringComparison.OrdinalIgnoreCase))
+        {
+            TempData["Message"] = "You cannot deactivate your own administrator account.";
+            return RedirectToPage();
+        }
+        admin.IsActive = !admin.IsActive;
+        await db.SaveChangesAsync();
+        return RedirectToPage();
     }
 
     public async Task<IActionResult> OnPostAddLeaveTypeAsync()
@@ -73,6 +134,7 @@ public class SettingsModel(AppDbContext db) : PageModel
     private async Task LoadAsync()
     {
         Employees = await db.Employees.OrderBy(x => x.Name).ToListAsync();
+        Administrators = await db.AppUsers.Where(x => x.Role == "Admin").OrderBy(x => x.Email).ToListAsync();
         LeaveTypes = await db.LeaveTypes.OrderBy(x => x.Id).ToListAsync();
         Recipients = await db.ReportRecipients.OrderBy(x => x.Email).ToListAsync();
     }
