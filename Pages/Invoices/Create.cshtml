@@ -109,7 +109,6 @@
                     if (!response.ok) throw new Error(result.message || 'Document extraction failed.');
 
                     const fields = [
-                        ['Customer', result.customer],
                         ['InvoiceNumber', result.invoiceNumber],
                         ['CurrencySymbol', result.currencySymbol],
                         ['Amount', result.amount],

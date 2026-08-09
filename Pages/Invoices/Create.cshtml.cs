@@ -110,9 +110,10 @@ public sealed class CreateModel(
         };
 
         var result = await invoices.SubmitAsync(entry, Attachment, HttpContext.RequestAborted);
+        var savedMessage = Attachment is null ? "Invoice entry saved" : "Invoice entry and document saved";
         TempData["Message"] = result.EmailSent
-            ? "Invoice entry saved and email sent."
-            : "Invoice entry saved, but email was not sent. Check the email configuration or the entry history.";
+            ? $"{savedMessage} and email sent."
+            : $"{savedMessage}, but email was not sent. Check the email configuration or the entry history.";
         return RedirectToPage("/Invoices/Index");
     }
 
