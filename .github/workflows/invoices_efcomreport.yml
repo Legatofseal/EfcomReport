@@ -1,0 +1,53 @@
+name: Build and deploy EfcomInvoices
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: Azure Web App name for the invoice application
+        required: true
+        type: string
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Build invoices application
+        run: dotnet build EfcomInvoices/EfcomInvoices.csproj --configuration Release
+
+      - name: Publish invoices application
+        run: dotnet publish EfcomInvoices/EfcomInvoices.csproj -c Release -o ${{ env.DOTNET_ROOT }}/invoice-app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: efcom-invoices-app
+          path: ${{ env.DOTNET_ROOT }}/invoice-app
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Download artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: efcom-invoices-app
+
+      - name: Deploy invoice application
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ inputs.app_name }}
+          slot-name: Production
+          package: .
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_INVOICES }}

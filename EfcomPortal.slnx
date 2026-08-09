@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="EfcomCore/EfcomCore.csproj" />
+  <Project Path="EfcomInvoices/EfcomInvoices.csproj" />
+  <Project Path="EfcomReport.csproj" />
+</Solution>

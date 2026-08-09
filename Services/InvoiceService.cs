@@ -73,7 +73,7 @@ public sealed class InvoiceService(
 
     public static string BuildSubject(InvoiceEntry entry)
     {
-        var amount = entry.Amount.ToString("0.##", CultureInfo.InvariantCulture);
+        var amount = entry.Amount.ToString("0.00", CultureInfo.InvariantCulture);
         return string.Join(",", [
             "EFCOM_INVOICE",
             Clean(entry.Customer),
@@ -91,7 +91,7 @@ public sealed class InvoiceService(
         return $"New Accounting Entry\n\n" +
                $"Customer: {entry.Customer}\n" +
                $"Invoice: {entry.InvoiceNumber}\n" +
-               $"Amount: {entry.CurrencySymbol}{entry.Amount.ToString("0.##", CultureInfo.InvariantCulture)}\n" +
+               $"Amount: {entry.CurrencySymbol}{entry.Amount.ToString("0.00", CultureInfo.InvariantCulture)}\n" +
                $"Payment: {entry.PaymentType}\n" +
                $"Comments: {entry.Comments ?? ""}\n" +
                $"Attachment: {attachment}\n" +

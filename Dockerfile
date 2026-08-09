@@ -1,6 +1,7 @@
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY ["EfcomReport.csproj", "."]
+COPY ["EfcomCore/EfcomCore.csproj", "EfcomCore/"]
 RUN dotnet restore "EfcomReport.csproj"
 COPY . .
 RUN dotnet publish "EfcomReport.csproj" -c Release -o /app/publish /p:UseAppHost=false

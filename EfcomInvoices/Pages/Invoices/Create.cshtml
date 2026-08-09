@@ -1,5 +1,5 @@
 @page
-@model EfcomReport.Pages.Invoices.CreateModel
+@model EfcomInvoices.Pages.Invoices.CreateModel
 @{ ViewData["Title"] = T.Get(Context, "New invoice entry"); }
 
 <h1>@T.Get(Context, "New invoice entry")</h1>
@@ -23,7 +23,7 @@
         <span asp-validation-for="InvoiceNumber" class="text-danger"></span>
     </div>
     <div class="col-md-4">
-        <label asp-for="CurrencySymbol" class="form-label">@T.Get(Context, "Currency symbol")</label>
+        <label asp-for="CurrencySymbol" class="form-label">@T.Get(Context, "Currency symbol") <span class="text-muted">(@T.Get(Context, "optional"))</span></label>
         <input asp-for="CurrencySymbol" class="form-control" placeholder="$" />
         <span asp-validation-for="CurrencySymbol" class="text-danger"></span>
     </div>
@@ -33,8 +33,8 @@
         <span asp-validation-for="Amount" class="text-danger"></span>
     </div>
     <div class="col-md-6">
-        <label asp-for="PaymentType" class="form-label">@T.Get(Context, "Payment type")</label>
-        <input asp-for="PaymentType" class="form-control" placeholder="Bank transfer, card..." />
+        <label asp-for="PaymentType" class="form-label">@T.Get(Context, "Payment type / reference")</label>
+        <input asp-for="PaymentType" class="form-control" placeholder="Bank transfer, card, last 4 digits..." />
         <span asp-validation-for="PaymentType" class="text-danger"></span>
     </div>
     <div class="col-md-6">
@@ -98,7 +98,9 @@
                         ['Customer', result.customer],
                         ['InvoiceNumber', result.invoiceNumber],
                         ['CurrencySymbol', result.currencySymbol],
-                        ['Amount', result.amount]
+                        ['Amount', result.amount],
+                        ['PaymentType', result.paymentType],
+                        ['Comments', result.comments]
                     ];
                     for (const [name, value] of fields) {
                         if (value !== null && value !== undefined && value !== '') {

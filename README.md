@@ -1,6 +1,18 @@
 # EfcomReport local pilot
 
-Small monolithic ASP.NET Core Razor Pages application for employee leave tracking.
+ASP.NET Core Razor Pages portal with separate tracker and invoice web applications.
+
+## Application split
+
+The repository now contains two independently buildable web applications plus a shared core:
+
+- `EfcomReport` — the leave tracker and portal shell, served at `/`.
+- `EfcomInvoices` — the invoice application, served at `/Invoices/...` on the same public domain.
+- `EfcomCore` — shared EF models, database initialization, authentication, email, file storage and invoice extraction services.
+
+Route `/Invoices/*` to the `EfcomInvoices` App Service through the domain reverse proxy; route the remaining paths to `EfcomReport`. Both applications must use the same `ConnectionStrings__DefaultConnection`, the same `DataProtection__KeyDirectory` storage and the same Google OAuth settings so the authentication cookie is shared. A local SQLite file and an app-local key directory are suitable for development only. For two Azure App Services, use a shared database and shared external key storage; the current SQLite and local file storage arrangement is not a safe cross-App-Service production topology.
+
+The solution file is `EfcomPortal.slnx`. The `main_efcomreport.yml` workflow deploys the tracker. The manual `invoices_efcomreport.yml` workflow deploys the invoice app after the second App Service exists and the `AZUREAPPSERVICE_PUBLISHPROFILE_INVOICES` GitHub secret is configured. The same-domain reverse-proxy route must send `/Invoices/*` to that second App Service.
 
 ## Included in this pilot
 
@@ -19,7 +31,7 @@ Small monolithic ASP.NET Core Razor Pages application for employee leave trackin
 - Admins can invite another Google account as an administrator from **Employees and settings**. If SMTP is configured, the invitation includes the sign-in link.
 - Sick Leave requests can optionally include a PDF, JPG or PNG document up to 10 MB; only the employee and administrators can download it.
 - Invoice entries are a separate authenticated module. Users can record the recipient email, customer, invoice number, currency symbol, amount, payment type, comments and an optional PDF/JPG/PNG document up to 10 MB. The entry is stored in SQLite and the same information is sent by SMTP using the `EFCOM_INVOICE,...` subject format. Administrators can see all entries; regular users can see their own entries.
-- Invoice entry forms can attempt to prefill customer, invoice number, currency and amount from an uploaded document. The result is always shown for manual confirmation before the entry is saved or emailed. Text PDFs use `pdftotext`; scanned PDFs and images use Tesseract OCR when the tools and language packs are installed.
+- Invoice entry forms can attempt to prefill customer, invoice number, currency, amount, payment/reference digits and item description from an uploaded document. The result is always shown for manual confirmation before the entry is saved or emailed. Text PDFs use `pdftotext`; scanned PDFs and images use Tesseract OCR when the tools and language packs are installed. The parser removes common RTL control characters, recognizes Hebrew labels and scores total/invoice candidates so receipt numbers, order numbers and intermediate amounts are not selected accidentally. Currency remains optional, so leaving it blank produces the original amount-only subject format.
 - All authenticated users can view the read-only work calendar; only administrators can change calendar days.
 - The interface supports English and Hebrew. Only interface text is translated; employee names, emails, leave types and other entered data remain unchanged.
 

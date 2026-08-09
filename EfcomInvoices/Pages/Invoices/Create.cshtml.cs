@@ -4,7 +4,7 @@ using EfcomReport.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 
-namespace EfcomReport.Pages.Invoices;
+namespace EfcomInvoices.Pages.Invoices;
 
 public sealed class CreateModel(
     CurrentUserService currentUser,
@@ -22,7 +22,7 @@ public sealed class CreateModel(
     [BindProperty, Required, StringLength(100)]
     public string InvoiceNumber { get; set; } = "";
 
-    [BindProperty, Required, StringLength(10)]
+    [BindProperty, StringLength(10)]
     public string CurrencySymbol { get; set; } = "";
 
     [BindProperty, Range(typeof(decimal), "0.01", "999999999999")]

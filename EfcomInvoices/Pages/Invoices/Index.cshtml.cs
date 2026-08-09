@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
-namespace EfcomReport.Pages.Invoices;
+namespace EfcomInvoices.Pages.Invoices;
 
 public sealed class IndexModel(AppDbContext db, CurrentUserService currentUser) : PageModel
 {

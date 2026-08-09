@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 
-namespace EfcomReport.Pages.Invoices;
+namespace EfcomInvoices.Pages.Invoices;
 
 public sealed class AttachmentModel(AppDbContext db, CurrentUserService currentUser, AttachmentService attachments) : PageModel
 {

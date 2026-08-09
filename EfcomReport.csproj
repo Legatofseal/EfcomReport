@@ -4,12 +4,23 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <DefaultItemExcludes>$(DefaultItemExcludes);EfcomCore\**;EfcomInvoices\**</DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="EfcomCore\EfcomCore.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.2" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.Google" Version="10.0.2" />
     <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.12" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="Models\Entities.cs" />
+    <Compile Remove="Data\AppDbContext.cs" />
+    <Compile Remove="Services\AppServices.cs" />
+    <Compile Remove="Services\InvoiceService.cs" />
+    <Compile Remove="Services\InvoiceExtractionService.cs" />
+    <Compile Remove="Services\UiText.cs" />
   </ItemGroup>
 
 </Project>
