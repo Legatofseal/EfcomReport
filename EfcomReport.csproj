@@ -20,7 +20,9 @@
     <Compile Remove="Services\AppServices.cs" />
     <Compile Remove="Services\InvoiceService.cs" />
     <Compile Remove="Services\InvoiceExtractionService.cs" />
+    <Compile Remove="Services\InventoryService.cs" />
     <Compile Remove="Services\UiText.cs" />
+    <Compile Remove="Models\InventoryEntities.cs" />
   </ItemGroup>
 
 </Project>

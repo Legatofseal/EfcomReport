@@ -18,6 +18,10 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ReminderRun> ReminderRuns => Set<ReminderRun>();
     public DbSet<ReportRequest> ReportRequests => Set<ReportRequest>();
     public DbSet<InvoiceEntry> InvoiceEntries => Set<InvoiceEntry>();
+    public DbSet<InventoryItem> InventoryItems => Set<InventoryItem>();
+    public DbSet<InventoryLocation> InventoryLocations => Set<InventoryLocation>();
+    public DbSet<InventoryStock> InventoryStocks => Set<InventoryStock>();
+    public DbSet<InventoryMovement> InventoryMovements => Set<InventoryMovement>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -34,6 +38,22 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         modelBuilder.Entity<ReportRequest>().HasIndex(x => new { x.EmployeeId, x.Year, x.Month });
         modelBuilder.Entity<InvoiceEntry>().HasIndex(x => x.CreatedAtUtc);
         modelBuilder.Entity<InvoiceEntry>().HasIndex(x => x.InvoiceNumber);
+        modelBuilder.Entity<InventoryItem>().Property(x => x.PartNumber).UseCollation("NOCASE");
+        modelBuilder.Entity<InventoryLocation>().Property(x => x.Name).UseCollation("NOCASE");
+        modelBuilder.Entity<InventoryItem>().HasIndex(x => x.PartNumber).IsUnique();
+        modelBuilder.Entity<InventoryLocation>().HasIndex(x => x.Name).IsUnique();
+        modelBuilder.Entity<InventoryStock>().HasIndex(x => new { x.ItemId, x.LocationId }).IsUnique();
+        modelBuilder.Entity<InventoryMovement>().HasIndex(x => x.CreatedAtUtc);
+        modelBuilder.Entity<InventoryMovement>()
+            .HasOne(x => x.FromLocation)
+            .WithMany()
+            .HasForeignKey(x => x.FromLocationId)
+            .OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<InventoryMovement>()
+            .HasOne(x => x.ToLocation)
+            .WithMany()
+            .HasForeignKey(x => x.ToLocationId)
+            .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<LeaveType>().HasData(
             new LeaveType { Id = 1, Name = "Vacation", IsActive = true },

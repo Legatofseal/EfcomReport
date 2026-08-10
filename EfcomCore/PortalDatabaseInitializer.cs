@@ -52,6 +52,60 @@ public static class PortalDatabaseInitializer
             ON "InvoiceEntries" ("CreatedAtUtc");
             CREATE INDEX IF NOT EXISTS "IX_InvoiceEntries_InvoiceNumber"
             ON "InvoiceEntries" ("InvoiceNumber");
+            CREATE TABLE IF NOT EXISTS "InventoryItems" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_InventoryItems" PRIMARY KEY AUTOINCREMENT,
+                "PartNumber" TEXT NOT NULL COLLATE NOCASE,
+                "Description" TEXT NOT NULL,
+                "Tags" TEXT NOT NULL,
+                "UnitCost" TEXT NULL,
+                "IsActive" INTEGER NOT NULL,
+                "CreatedAtUtc" TEXT NOT NULL,
+                "UpdatedAtUtc" TEXT NOT NULL,
+                "CreatedByEmail" TEXT NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_InventoryItems_PartNumber"
+            ON "InventoryItems" ("PartNumber" COLLATE NOCASE);
+            CREATE TABLE IF NOT EXISTS "InventoryLocations" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_InventoryLocations" PRIMARY KEY AUTOINCREMENT,
+                "Name" TEXT NOT NULL COLLATE NOCASE,
+                "IsActive" INTEGER NOT NULL,
+                "CreatedAtUtc" TEXT NOT NULL,
+                "CreatedByEmail" TEXT NOT NULL
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_InventoryLocations_Name"
+            ON "InventoryLocations" ("Name" COLLATE NOCASE);
+            CREATE TABLE IF NOT EXISTS "InventoryStocks" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_InventoryStocks" PRIMARY KEY AUTOINCREMENT,
+                "ItemId" INTEGER NOT NULL,
+                "LocationId" INTEGER NOT NULL,
+                "Quantity" INTEGER NOT NULL,
+                "UpdatedAtUtc" TEXT NOT NULL,
+                CONSTRAINT "FK_InventoryStocks_InventoryItems_ItemId"
+                    FOREIGN KEY ("ItemId") REFERENCES "InventoryItems" ("Id") ON DELETE CASCADE,
+                CONSTRAINT "FK_InventoryStocks_InventoryLocations_LocationId"
+                    FOREIGN KEY ("LocationId") REFERENCES "InventoryLocations" ("Id") ON DELETE CASCADE
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_InventoryStocks_ItemId_LocationId"
+            ON "InventoryStocks" ("ItemId", "LocationId");
+            CREATE TABLE IF NOT EXISTS "InventoryMovements" (
+                "Id" INTEGER NOT NULL CONSTRAINT "PK_InventoryMovements" PRIMARY KEY AUTOINCREMENT,
+                "ItemId" INTEGER NOT NULL,
+                "FromLocationId" INTEGER NULL,
+                "ToLocationId" INTEGER NULL,
+                "Quantity" INTEGER NOT NULL,
+                "MovementType" TEXT NOT NULL,
+                "PerformedByEmail" TEXT NOT NULL,
+                "Note" TEXT NULL,
+                "CreatedAtUtc" TEXT NOT NULL,
+                CONSTRAINT "FK_InventoryMovements_InventoryItems_ItemId"
+                    FOREIGN KEY ("ItemId") REFERENCES "InventoryItems" ("Id") ON DELETE CASCADE,
+                CONSTRAINT "FK_InventoryMovements_FromLocation"
+                    FOREIGN KEY ("FromLocationId") REFERENCES "InventoryLocations" ("Id") ON DELETE RESTRICT,
+                CONSTRAINT "FK_InventoryMovements_ToLocation"
+                    FOREIGN KEY ("ToLocationId") REFERENCES "InventoryLocations" ("Id") ON DELETE RESTRICT
+            );
+            CREATE INDEX IF NOT EXISTS "IX_InventoryMovements_CreatedAtUtc"
+            ON "InventoryMovements" ("CreatedAtUtc");
             CREATE TABLE IF NOT EXISTS "InvoiceRecipients" (
                 "Id" INTEGER NOT NULL CONSTRAINT "PK_InvoiceRecipients" PRIMARY KEY AUTOINCREMENT,
                 "Name" TEXT NOT NULL,

@@ -1,0 +1,85 @@
+@page
+@model EfcomReport.Pages.Inventory.IndexModel
+@{ ViewData["Title"] = T.Get(Context, "Inventory"); }
+
+<div class="d-flex justify-content-between align-items-center mb-4 gap-3 flex-wrap">
+    <div>
+        <h1>@T.Get(Context, "Inventory")</h1>
+        <p class="text-muted mb-0">@T.Get(Context, "Search parts and report what you took.")</p>
+    </div>
+    @if (User.IsInRole("Admin"))
+    {
+        <a class="btn btn-outline-primary" asp-page="/Admin/Inventory">@T.Get(Context, "Inventory management")</a>
+    }
+</div>
+
+<form method="get" class="row g-2 mb-4">
+    <div class="col-md-8 col-lg-6">
+        <label for="inventory-search" class="visually-hidden">@T.Get(Context, "Search")</label>
+        <input id="inventory-search" name="q" value="@Model.Q" class="form-control" placeholder="@T.Get(Context, "Part number, description or tag")" />
+    </div>
+    <div class="col-auto">
+        <button class="btn btn-primary" type="submit">@T.Get(Context, "Search")</button>
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.Q))
+    {
+        <div class="col-auto">
+            <a class="btn btn-outline-secondary" asp-page="/Inventory/Index">@T.Get(Context, "Clear")</a>
+        </div>
+    }
+</form>
+
+@if (Model.Items.Count == 0)
+{
+    <p class="text-muted">@T.Get(Context, "No inventory items found.")</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>@T.Get(Context, "Part number")</th>
+                    <th>@T.Get(Context, "Description")</th>
+                    <th>@T.Get(Context, "Tags")</th>
+                    <th>@T.Get(Context, "Total")</th>
+                    <th>@T.Get(Context, "Locations and quantity")</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td><strong>@item.PartNumber</strong></td>
+                    <td>@item.Description</td>
+                    <td>@(string.IsNullOrWhiteSpace(item.Tags) ? "—" : item.Tags)</td>
+                    <td>@item.TotalQuantity</td>
+                    <td>
+                        @if (item.Stocks.Count == 0)
+                        {
+                            <span class="text-muted">@T.Get(Context, "No quantity reported.")</span>
+                        }
+                        else
+                        {
+                            <div class="d-flex flex-column gap-2">
+                            @foreach (var stock in item.Stocks)
+                            {
+                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                    <span>@stock.LocationName</span>
+                                    <span class="badge text-bg-secondary">@stock.Quantity</span>
+                                    <form method="post" asp-page-handler="Take" class="d-inline">
+                                        <input type="hidden" name="stockId" value="@stock.StockId" />
+                                        <input type="hidden" name="q" value="@Model.Q" />
+                                        <button class="btn btn-sm btn-outline-primary" type="submit">@T.Get(Context, "I took one")</button>
+                                    </form>
+                                </div>
+                            }
+                            </div>
+                        }
+                    </td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}

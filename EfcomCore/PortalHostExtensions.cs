@@ -22,6 +22,7 @@ public static class PortalHostExtensions
         services.AddScoped<EmailService>();
         services.AddScoped<InvoiceService>();
         services.AddScoped<InvoiceExtractionService>();
+        services.AddScoped<InventoryService>();
         services.AddScoped<ReminderService>();
         services.AddScoped<AttachmentService>();
         services.AddSingleton<UiText>();

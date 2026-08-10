@@ -19,6 +19,8 @@
     <Compile Include="..\Services\AppServices.cs" Link="Services\AppServices.cs" />
     <Compile Include="..\Services\InvoiceService.cs" Link="Services\InvoiceService.cs" />
     <Compile Include="..\Services\InvoiceExtractionService.cs" Link="Services\InvoiceExtractionService.cs" />
+    <Compile Include="..\Services\InventoryService.cs" Link="Services\InventoryService.cs" />
     <Compile Include="..\Services\UiText.cs" Link="Services\UiText.cs" />
+    <Compile Include="..\Models\InventoryEntities.cs" Link="Models\InventoryEntities.cs" />
   </ItemGroup>
 </Project>

@@ -1,0 +1,171 @@
+@page
+@model EfcomReport.Pages.Admin.InventoryModel
+@{ ViewData["Title"] = T.Get(Context, "Inventory management"); }
+
+<div class="mb-4">
+    <h1>@T.Get(Context, "Inventory management")</h1>
+    <p class="text-muted mb-0">@T.Get(Context, "Add parts, increase quantities and move stock between drawers.")</p>
+</div>
+
+<div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+<div class="row g-4 mb-5">
+    <div class="col-xl-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h4">@T.Get(Context, "Add or increase stock")</h2>
+                <p class="text-muted small">@T.Get(Context, "If the part number already exists, the quantity is added to the selected location.")</p>
+                <form method="post" asp-page-handler="Add" class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="PartNumber" class="form-label">@T.Get(Context, "Part number")</label>
+                        <input asp-for="PartNumber" class="form-control" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Description" class="form-label">@T.Get(Context, "Description")</label>
+                        <input asp-for="Description" class="form-control" required />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="Tags" class="form-label">@T.Get(Context, "Tags")</label>
+                        <input asp-for="Tags" class="form-control" placeholder="@T.Get(Context, "Optional tags")" />
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="UnitCost" class="form-label">@T.Get(Context, "Unit cost")</label>
+                        <input asp-for="UnitCost" class="form-control" type="number" min="0" step="0.01" />
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="LocationName" class="form-label">@T.Get(Context, "Drawer / location")</label>
+                        <input asp-for="LocationName" class="form-control" required placeholder="@T.Get(Context, "For example: Cabinet 2 / Drawer 4")" />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="Quantity" class="form-label">@T.Get(Context, "Quantity")</label>
+                        <input asp-for="Quantity" class="form-control" type="number" min="1" required />
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-primary" type="submit">@T.Get(Context, "Save stock")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-xl-6">
+        <div class="card h-100">
+            <div class="card-body">
+                <h2 class="h4">@T.Get(Context, "Move stock")</h2>
+                <form method="post" asp-page-handler="Move" class="row g-3">
+                    <div class="col-md-6">
+                        <label asp-for="MoveItemId" class="form-label">@T.Get(Context, "Part number")</label>
+                        <select asp-for="MoveItemId" class="form-select" required>
+                            <option value="">@T.Get(Context, "Select part")</option>
+                            @foreach (var item in Model.Items)
+                            {
+                                <option value="@item.Id">@item.PartNumber — @item.Description</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label asp-for="MoveFromLocationId" class="form-label">@T.Get(Context, "From location")</label>
+                        <select asp-for="MoveFromLocationId" class="form-select" required>
+                            <option value="">@T.Get(Context, "Select location")</option>
+                            @foreach (var location in Model.Locations)
+                            {
+                                <option value="@location.Id">@location.Name</option>
+                            }
+                        </select>
+                    </div>
+                    <div class="col-md-8">
+                        <label asp-for="MoveToLocationName" class="form-label">@T.Get(Context, "To location")</label>
+                        <input asp-for="MoveToLocationName" class="form-control" required placeholder="@T.Get(Context, "Existing or new drawer")" />
+                    </div>
+                    <div class="col-md-4">
+                        <label asp-for="MoveQuantity" class="form-label">@T.Get(Context, "Quantity")</label>
+                        <input asp-for="MoveQuantity" class="form-control" type="number" min="1" required />
+                    </div>
+                    <div class="col-12">
+                        <label asp-for="MoveNote" class="form-label">@T.Get(Context, "Comment")</label>
+                        <input asp-for="MoveNote" class="form-control" />
+                    </div>
+                    <div class="col-12">
+                        <button class="btn btn-outline-primary" type="submit">@T.Get(Context, "Move")</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<h2 class="h4">@T.Get(Context, "Current stock")</h2>
+@if (Model.Items.Count == 0)
+{
+    <p class="text-muted">@T.Get(Context, "No inventory items found.")</p>
+}
+else
+{
+    <div class="table-responsive mb-5">
+        <table class="table table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>@T.Get(Context, "Part number")</th>
+                    <th>@T.Get(Context, "Description")</th>
+                    <th>@T.Get(Context, "Tags")</th>
+                    <th>@T.Get(Context, "Unit cost")</th>
+                    <th>@T.Get(Context, "Total")</th>
+                    <th>@T.Get(Context, "Locations and quantity")</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var item in Model.Items)
+            {
+                <tr>
+                    <td><strong>@item.PartNumber</strong></td>
+                    <td>@item.Description</td>
+                    <td>@(string.IsNullOrWhiteSpace(item.Tags) ? "—" : item.Tags)</td>
+                    <td>@(item.UnitCost?.ToString("0.00") ?? "—")</td>
+                    <td>@item.TotalQuantity</td>
+                    <td>@(item.Stocks.Count == 0 ? T.Get(Context, "No quantity reported.") : string.Join(", ", item.Stocks.Select(x => $"{x.LocationName}: {x.Quantity}")))</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
+
+<h2 class="h4">@T.Get(Context, "Recent movements")</h2>
+@if (Model.Movements.Count == 0)
+{
+    <p class="text-muted">@T.Get(Context, "No movements yet.")</p>
+}
+else
+{
+    <div class="table-responsive">
+        <table class="table table-sm table-striped align-middle">
+            <thead>
+                <tr>
+                    <th>@T.Get(Context, "Date")</th>
+                    <th>@T.Get(Context, "Part number")</th>
+                    <th>@T.Get(Context, "Operation")</th>
+                    <th>@T.Get(Context, "Quantity")</th>
+                    <th>@T.Get(Context, "From location")</th>
+                    <th>@T.Get(Context, "To location")</th>
+                    <th>@T.Get(Context, "By")</th>
+                    <th>@T.Get(Context, "Comment")</th>
+                </tr>
+            </thead>
+            <tbody>
+            @foreach (var movement in Model.Movements)
+            {
+                <tr>
+                    <td>@movement.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
+                    <td>@movement.PartNumber</td>
+                    <td>@T.Get(Context, movement.MovementType)</td>
+                    <td>@movement.Quantity</td>
+                    <td>@(movement.FromLocation ?? "—")</td>
+                    <td>@(movement.ToLocation ?? "—")</td>
+                    <td>@movement.PerformedByEmail</td>
+                    <td>@(movement.Note ?? "—")</td>
+                </tr>
+            }
+            </tbody>
+        </table>
+    </div>
+}
