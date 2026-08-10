@@ -79,6 +79,7 @@ public sealed class UiText
 
     private static readonly IReadOnlyDictionary<string, string> RussianAdditional = new Dictionary<string, string>(StringComparer.Ordinal)
     {
+        ["Click to change calendar status"] = "Нажмите, чтобы изменить статус дня",
         ["Half-day absence"] = "Отсутствие на полдня",
         ["Use this for a half-day absence on one date."] = "Используйте для отсутствия на полдня в одну дату.",
         ["Day portion"] = "Продолжительность дня",
