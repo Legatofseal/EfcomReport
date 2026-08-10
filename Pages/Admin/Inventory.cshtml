@@ -18,7 +18,18 @@
                 <form method="post" asp-page-handler="Add" class="row g-3">
                     <div class="col-md-6">
                         <label asp-for="PartNumber" class="form-label">@T.Get(Context, "Part number")</label>
-                        <input asp-for="PartNumber" class="form-control" required />
+                        <input asp-for="PartNumber" class="form-control" list="inventory-part-numbers" required placeholder="@T.Get(Context, "Select existing or type a new part number")" />
+                        <datalist id="inventory-part-numbers">
+                            @foreach (var item in Model.Items)
+                            {
+                                <option value="@item.PartNumber"
+                                        data-description="@item.Description"
+                                        data-tags="@item.Tags"
+                                        data-keywords="@item.Keywords"
+                                        data-unit-cost="@(item.UnitCost?.ToString("0.00") ?? "")"></option>
+                            }
+                        </datalist>
+                        <div class="form-text">@T.Get(Context, "Choose an existing part number or type a new one.")</div>
                     </div>
                     <div class="col-md-6">
                         <label asp-for="Description" class="form-label">@T.Get(Context, "Description")</label>
@@ -97,6 +108,30 @@
         </div>
     </div>
 </div>
+
+@section Scripts {
+    <script>
+        (() => {
+            const partNumber = document.getElementById('PartNumber');
+            const description = document.getElementById('Description');
+            const tags = document.getElementById('Tags');
+            const keywords = document.getElementById('Keywords');
+            const unitCost = document.getElementById('UnitCost');
+            const options = [...document.querySelectorAll('#inventory-part-numbers option')];
+            if (!partNumber || !description || !tags || !keywords || !unitCost) return;
+
+            partNumber.addEventListener('input', () => {
+                const value = partNumber.value.trim().toLowerCase();
+                const option = options.find(candidate => candidate.value.trim().toLowerCase() === value);
+                if (!option) return;
+                description.value = option.dataset.description || '';
+                tags.value = option.dataset.tags || '';
+                keywords.value = option.dataset.keywords || '';
+                unitCost.value = option.dataset.unitCost || '';
+            });
+        })();
+    </script>
+}
 
 <h2 class="h4">@T.Get(Context, "Current stock")</h2>
 @if (Model.Items.Count == 0)
