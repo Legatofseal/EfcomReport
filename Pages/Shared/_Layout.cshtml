@@ -50,7 +50,7 @@
             <a class="sidebar-link" asp-page="/Invoices/Create">@T.Get(Context, "New invoice entry")</a>
 
             <div class="sidebar-heading mt-4">@T.Get(Context, "Inventory")</div>
-            <a class="sidebar-link" asp-page="/Inventory/Index">@T.Get(Context, "Inventory search")</a>
+            <a class="sidebar-link" asp-page="/Inventory/Index">@T.Get(Context, "Inventory")</a>
 
             @if (User.IsInRole("Admin"))
             {
