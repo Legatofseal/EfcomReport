@@ -37,6 +37,7 @@ public sealed class AbsenceRequest
     public LeaveType LeaveType { get; set; } = null!;
     public DateTime StartDate { get; set; }
     public DateTime EndDate { get; set; }
+    public bool IsHalfDay { get; set; }
     public string? Notes { get; set; }
     public string? AttachmentOriginalName { get; set; }
     public string? AttachmentStorageName { get; set; }
@@ -71,6 +72,7 @@ public sealed class WorkdayOverride
     public int Id { get; set; }
     public DateTime Date { get; set; }
     public bool IsWorking { get; set; }
+    public bool IsHalfDay { get; set; }
     public string? Note { get; set; }
     public string UpdatedByEmail { get; set; } = "";
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;

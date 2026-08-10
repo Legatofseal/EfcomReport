@@ -36,10 +36,10 @@ else
     @if (Model.Requests.Count == 0) { <p class="text-muted">@T.Get(Context, "No absence records for this month.")</p> }
     else
     {
-        <div class="table-responsive"><table class="table table-striped align-middle"><thead><tr><th>@T.Get(Context, "Type")</th><th>@T.Get(Context, "Start date")</th><th>@T.Get(Context, "End date")</th><th>@T.Get(Context, "Notes")</th><th></th></tr></thead><tbody>
+        <div class="table-responsive"><table class="table table-striped align-middle"><thead><tr><th>@T.Get(Context, "Type")</th><th>@T.Get(Context, "Start date")</th><th>@T.Get(Context, "End date")</th><th>@T.Get(Context, "Day portion")</th><th>@T.Get(Context, "Notes")</th><th></th></tr></thead><tbody>
         @foreach (var item in Model.Requests)
         {
-            <tr><td>@item.LeaveType.Name</td><td>@item.StartDate.ToString("yyyy-MM-dd")</td><td>@item.EndDate.ToString("yyyy-MM-dd")</td><td>@item.Notes</td><td>
+            <tr><td>@item.LeaveType.Name</td><td>@item.StartDate.ToString("yyyy-MM-dd")</td><td>@item.EndDate.ToString("yyyy-MM-dd")</td><td>@T.Get(Context, item.IsHalfDay ? "Half day" : "Full day")</td><td>@item.Notes</td><td>
                 @if (item.AttachmentOriginalName is not null)
                 {
                     <a asp-page="/Requests/Attachment" asp-route-id="@item.Id">@T.Get(Context, "Document")</a>

@@ -13,6 +13,7 @@ public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCa
     [BindProperty] public int LeaveTypeId { get; set; }
     [BindProperty, DataType(DataType.Date)] public DateTime StartDate { get; set; } = DateTime.Today;
     [BindProperty, DataType(DataType.Date)] public DateTime EndDate { get; set; } = DateTime.Today;
+    [BindProperty] public bool IsHalfDay { get; set; }
     [BindProperty] public string? Notes { get; set; }
     [BindProperty] public IFormFile? Attachment { get; set; }
     [BindProperty(SupportsGet = true)] public int? Month { get; set; }
@@ -34,6 +35,7 @@ public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCa
         if (user?.EmployeeId is not int employeeId) return Forbid();
         StartDate = StartDate.Date; EndDate = EndDate.Date;
         if (EndDate < StartDate) ModelState.AddModelError(nameof(EndDate), "End date must not be earlier than start date.");
+        if (IsHalfDay && StartDate != EndDate) ModelState.AddModelError(nameof(IsHalfDay), "Half-day absence must use the same start and end date.");
         var leaveType = await db.LeaveTypes.SingleOrDefaultAsync(x => x.Id == LeaveTypeId && x.IsActive);
         if (leaveType is null) ModelState.AddModelError(nameof(LeaveTypeId), "Select an active leave type.");
         var isSickLeave = string.Equals(leaveType?.Name, "Sick Leave", StringComparison.OrdinalIgnoreCase);
@@ -52,7 +54,7 @@ public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCa
             var uploadedAtUtc = Attachment is null ? (DateTime?)null : DateTime.UtcNow;
             db.AbsenceRequests.Add(new AbsenceRequest
             {
-                EmployeeId = employeeId, LeaveTypeId = LeaveTypeId, StartDate = StartDate, EndDate = EndDate,
+                EmployeeId = employeeId, LeaveTypeId = LeaveTypeId, StartDate = StartDate, EndDate = EndDate, IsHalfDay = IsHalfDay,
                 Notes = Notes?.Trim(), CreatedByEmail = user.Email, CreatedAtUtc = DateTime.UtcNow, UpdatedAtUtc = DateTime.UtcNow,
                 AttachmentOriginalName = storedAttachment?.OriginalName, AttachmentStorageName = storedAttachment?.StorageName,
                 AttachmentContentType = storedAttachment?.ContentType, AttachmentSize = storedAttachment?.Size,
@@ -68,7 +70,9 @@ public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCa
             throw;
         }
         await submissions.MarkRangeAsync(employeeId, StartDate, EndDate);
-        TempData["Message"] = $"Absence saved. Counted workdays: {await calendar.CountAsync(StartDate, EndDate)}.";
+        var countedWorkdays = await calendar.CountAsync(StartDate, EndDate);
+        if (IsHalfDay) countedWorkdays = Math.Min(countedWorkdays, 0.5m);
+        TempData["Message"] = $"Absence saved. Counted workdays: {countedWorkdays:0.##}.";
         return RedirectToPage("/Index", new { month = StartDate.Month, year = StartDate.Year });
     }
 }

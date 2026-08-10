@@ -14,6 +14,7 @@ public class EditModel(AppDbContext db, CurrentUserService currentUser, Submissi
     [BindProperty] public int LeaveTypeId { get; set; }
     [BindProperty, DataType(DataType.Date)] public DateTime StartDate { get; set; }
     [BindProperty, DataType(DataType.Date)] public DateTime EndDate { get; set; }
+    [BindProperty] public bool IsHalfDay { get; set; }
     [BindProperty] public string? Notes { get; set; }
     [BindProperty] public IFormFile? Attachment { get; set; }
     [BindProperty] public bool RemoveAttachment { get; set; }
@@ -31,6 +32,7 @@ public class EditModel(AppDbContext db, CurrentUserService currentUser, Submissi
         LeaveTypes = await db.LeaveTypes.Where(x => x.IsActive).OrderBy(x => x.Id).ToListAsync();
         StartDate = StartDate.Date; EndDate = EndDate.Date;
         if (EndDate < StartDate) ModelState.AddModelError(nameof(EndDate), "End date must not be earlier than start date.");
+        if (IsHalfDay && StartDate != EndDate) ModelState.AddModelError(nameof(IsHalfDay), "Half-day absence must use the same start and end date.");
         var leaveType = await db.LeaveTypes.SingleOrDefaultAsync(x => x.Id == LeaveTypeId && x.IsActive);
         if (leaveType is null) ModelState.AddModelError(nameof(LeaveTypeId), "Select an active leave type.");
         var isSickLeave = string.Equals(leaveType?.Name, "Sick Leave", StringComparison.OrdinalIgnoreCase);
@@ -47,7 +49,7 @@ public class EditModel(AppDbContext db, CurrentUserService currentUser, Submissi
         try
         {
             if (Attachment is not null) replacement = await attachments.SaveAsync(Attachment);
-            RequestItem.LeaveTypeId = LeaveTypeId; RequestItem.StartDate = StartDate; RequestItem.EndDate = EndDate; RequestItem.Notes = Notes?.Trim(); RequestItem.UpdatedAtUtc = DateTime.UtcNow;
+            RequestItem.LeaveTypeId = LeaveTypeId; RequestItem.StartDate = StartDate; RequestItem.EndDate = EndDate; RequestItem.IsHalfDay = IsHalfDay; RequestItem.Notes = Notes?.Trim(); RequestItem.UpdatedAtUtc = DateTime.UtcNow;
             if (replacement is not null)
             {
                 RequestItem.AttachmentOriginalName = replacement.OriginalName; RequestItem.AttachmentStorageName = replacement.StorageName;
@@ -92,6 +94,6 @@ public class EditModel(AppDbContext db, CurrentUserService currentUser, Submissi
         RequestItem = await db.AbsenceRequests.Include(x => x.Employee).SingleOrDefaultAsync(x => x.Id == Id && !x.IsCancelled);
         if (RequestItem is null || user is null || (user.Role != "Admin" && user.EmployeeId != RequestItem.EmployeeId)) return false;
         LeaveTypes = await db.LeaveTypes.Where(x => x.IsActive).OrderBy(x => x.Id).ToListAsync();
-        LeaveTypeId = RequestItem.LeaveTypeId; StartDate = RequestItem.StartDate; EndDate = RequestItem.EndDate; Notes = RequestItem.Notes; return true;
+        LeaveTypeId = RequestItem.LeaveTypeId; StartDate = RequestItem.StartDate; EndDate = RequestItem.EndDate; IsHalfDay = RequestItem.IsHalfDay; Notes = RequestItem.Notes; return true;
     }
 }

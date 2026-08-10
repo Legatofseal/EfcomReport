@@ -27,31 +27,33 @@ public sealed class WorkCalendarService(AppDbContext db)
 {
     public static DateTime Date(DateTime value) => value.Date;
 
-    public static bool DefaultIsWorking(DateTime date) =>
-        date.DayOfWeek is not (DayOfWeek.Friday or DayOfWeek.Saturday);
+    public static CalendarSchedule DefaultSchedule(DateTime date) =>
+        new(date.DayOfWeek is not (DayOfWeek.Friday or DayOfWeek.Saturday), false);
 
-    public async Task<Dictionary<DateTime, bool>> OverridesAsync(DateTime start, DateTime end)
+    public static bool DefaultIsWorking(DateTime date) => DefaultSchedule(date).IsWorking;
+
+    public async Task<Dictionary<DateTime, CalendarSchedule>> OverridesAsync(DateTime start, DateTime end)
     {
         return await db.WorkdayOverrides
             .Where(x => x.Date >= start.Date && x.Date <= end.Date)
-            .ToDictionaryAsync(x => x.Date.Date, x => x.IsWorking);
+            .ToDictionaryAsync(x => x.Date.Date, x => new CalendarSchedule(x.IsWorking, x.IsWorking && x.IsHalfDay));
     }
 
     public async Task<bool> IsWorkingAsync(DateTime date)
     {
         var overrideDay = await db.WorkdayOverrides.SingleOrDefaultAsync(x => x.Date == date.Date);
-        return overrideDay?.IsWorking ?? DefaultIsWorking(date);
+        return overrideDay?.IsWorking ?? DefaultSchedule(date).IsWorking;
     }
 
-    public async Task<int> CountAsync(DateTime start, DateTime end)
+    public async Task<decimal> CountAsync(DateTime start, DateTime end)
     {
         if (end.Date < start.Date) return 0;
         var overrides = await OverridesAsync(start, end);
-        var count = 0;
+        var count = 0m;
         for (var day = start.Date; day <= end.Date; day = day.AddDays(1))
         {
-            var working = overrides.TryGetValue(day, out var value) ? value : DefaultIsWorking(day);
-            if (working) count++;
+            var schedule = overrides.TryGetValue(day, out var value) ? value : DefaultSchedule(day);
+            if (schedule.IsWorking) count += schedule.IsHalfDay ? 0.5m : 1m;
         }
         return count;
     }
@@ -63,14 +65,20 @@ public sealed class WorkCalendarService(AppDbContext db)
         var overrides = await OverridesAsync(start, end);
         return Enumerable.Range(0, end.Day)
             .Select(offset => start.AddDays(offset))
-            .Select(date => new CalendarDay(date,
-                overrides.TryGetValue(date.Date, out var value) ? value : DefaultIsWorking(date),
-                overrides.ContainsKey(date.Date)))
+            .Select(date =>
+            {
+                var schedule = overrides.TryGetValue(date.Date, out var value) ? value : DefaultSchedule(date);
+                return new CalendarDay(date, schedule.IsWorking, schedule.IsHalfDay, overrides.ContainsKey(date.Date));
+            })
             .ToList();
     }
 }
 
-public sealed record CalendarDay(DateTime Date, bool IsWorking, bool IsOverride);
+public sealed record CalendarSchedule(bool IsWorking, bool IsHalfDay);
+public sealed record CalendarDay(DateTime Date, bool IsWorking, bool IsHalfDay, bool IsOverride)
+{
+    public string Status => !IsOverride ? "default" : IsHalfDay ? "half" : IsWorking ? "working" : "off";
+}
 
 public sealed record StoredAttachment(string OriginalName, string StorageName, string ContentType, long Size);
 
@@ -297,26 +305,31 @@ public sealed class ReportService(AppDbContext db, WorkCalendarService calendar)
             row.EntryCounts[request.LeaveType.Name] = row.EntryCounts.GetValueOrDefault(request.LeaveType.Name) + 1;
             var start = request.StartDate.Date < rangeStart ? rangeStart : request.StartDate.Date;
             var end = request.EndDate.Date > rangeEnd ? rangeEnd : request.EndDate.Date;
-            var typeDays = row.DaySets.GetValueOrDefault(request.LeaveType.Name);
+            var typeDays = row.DayFractionsByType.GetValueOrDefault(request.LeaveType.Name);
             if (typeDays is null)
             {
-                typeDays = new HashSet<DateTime>();
-                row.DaySets[request.LeaveType.Name] = typeDays;
+                typeDays = new Dictionary<DateTime, decimal>();
+                row.DayFractionsByType[request.LeaveType.Name] = typeDays;
             }
             for (var day = start; day <= end; day = day.AddDays(1))
             {
-                var working = overrides.TryGetValue(day, out var value)
+                var schedule = overrides.TryGetValue(day, out var value)
                     ? value
-                    : WorkCalendarService.DefaultIsWorking(day);
-                if (working) typeDays.Add(day.Date);
+                    : WorkCalendarService.DefaultSchedule(day);
+                if (!schedule.IsWorking) continue;
+                var availableFraction = schedule.IsHalfDay ? 0.5m : 1m;
+                var absenceFraction = request.IsHalfDay ? 0.5m : 1m;
+                var leaveFraction = Math.Min(availableFraction, absenceFraction);
+                typeDays[day.Date] = Math.Max(typeDays.GetValueOrDefault(day.Date), leaveFraction);
+                row.DayFractions[day.Date] = Math.Max(row.DayFractions.GetValueOrDefault(day.Date), leaveFraction);
             }
-            row.DaysByType[request.LeaveType.Name] = typeDays.Count;
+            row.DaysByType[request.LeaveType.Name] = typeDays.Values.Sum();
         }
 
         foreach (var rowPair in rows)
         {
             var row = rowPair.Value;
-            row.TotalDays = row.DaySets.Values.SelectMany(x => x).Distinct().Count();
+            row.TotalDays = row.DayFractions.Values.Sum();
             foreach (var period in periods)
             {
                 var hasSubmission = submissionLookup.TryGetValue((rowPair.Key, period.Year, period.Month), out var submission);
@@ -357,10 +370,11 @@ public sealed class ReportRow(int employeeId, string employeeName)
 {
     public int EmployeeId { get; } = employeeId;
     public string EmployeeName { get; } = employeeName;
-    public Dictionary<string, int> DaysByType { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, decimal> DaysByType { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, int> EntryCounts { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public Dictionary<string, HashSet<DateTime>> DaySets { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public int TotalDays { get; set; }
+    public Dictionary<string, Dictionary<DateTime, decimal>> DayFractionsByType { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<DateTime, decimal> DayFractions { get; } = [];
+    public decimal TotalDays { get; set; }
     public List<ReportSubmissionStatus> SubmissionStatuses { get; } = [];
     public string SubmissionState => string.Join("; ", SubmissionStatuses.Select(x => $"{x.Year}-{x.Month:00}: {x.State}"));
 }

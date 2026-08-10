@@ -1,5 +1,6 @@
 using System.Text;
 using System.IO.Compression;
+using System.Globalization;
 using EfcomReport.Data;
 using EfcomReport.Models;
 using EfcomReport.Services;
@@ -269,10 +270,10 @@ public class ReportsModel(AppDbContext db, ReportService reports, EmailService e
             var values = new List<string> { report.PeriodLabel, row.EmployeeName };
             foreach (var type in report.Types)
             {
-                values.Add(row.DaysByType.GetValueOrDefault(type.Name).ToString());
+                values.Add(row.DaysByType.GetValueOrDefault(type.Name).ToString("0.##", CultureInfo.InvariantCulture));
                 values.Add(row.EntryCounts.GetValueOrDefault(type.Name).ToString());
             }
-            values.Add(row.TotalDays.ToString());
+            values.Add(row.TotalDays.ToString("0.##", CultureInfo.InvariantCulture));
             values.Add(row.SubmissionState);
             sb.AppendLine(string.Join(',', values.Select(Escape)));
         }

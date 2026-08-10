@@ -79,6 +79,11 @@ public sealed class UiText
 
     private static readonly IReadOnlyDictionary<string, string> RussianAdditional = new Dictionary<string, string>(StringComparer.Ordinal)
     {
+        ["Half-day absence"] = "Отсутствие на полдня",
+        ["Use this for a half-day absence on one date."] = "Используйте для отсутствия на полдня в одну дату.",
+        ["Day portion"] = "Продолжительность дня",
+        ["Half day"] = "Полдня",
+        ["Full day"] = "Полный день",
         ["Resend"] = "Отправить повторно",
         ["Resend invoice email?"] = "Повторно отправить email инвойса?",
         ["Document is not stored; resend includes only invoice data."] = "Документ не хранится; повторно отправятся только данные инвойса.",

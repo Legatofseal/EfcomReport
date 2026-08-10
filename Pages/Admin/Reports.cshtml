@@ -132,10 +132,10 @@
                         <td>@row.EmployeeName</td>
                         @foreach (var type in Model.Report.Types)
                         {
-                            <td>@row.DaysByType.GetValueOrDefault(type.Name)</td>
+                            <td>@row.DaysByType.GetValueOrDefault(type.Name).ToString("0.##")</td>
                             <td>@row.EntryCounts.GetValueOrDefault(type.Name)</td>
                         }
-                        <td>@row.TotalDays</td>
+                        <td>@row.TotalDays.ToString("0.##")</td>
                         <td>
                             @foreach (var status in row.SubmissionStatuses)
                             {

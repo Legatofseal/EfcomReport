@@ -15,13 +15,27 @@ public class CalendarModel(AppDbContext db, WorkCalendarService calendar, Curren
     public List<CalendarDay> Days { get; private set; } = [];
     public async Task OnGetAsync() => Days = await calendar.MonthAsync(CurrentYear, CurrentMonth);
 
-    public async Task<IActionResult> OnPostToggleAsync(DateTime date, int year, int month)
+    public async Task<IActionResult> OnPostSetAsync(DateTime date, int year, int month, string status)
     {
+        status = (status ?? "default").Trim().ToLowerInvariant();
+        if (status is not ("default" or "working" or "half" or "off"))
+            return BadRequest("Invalid calendar status.");
+
         var email = currentUser.Email(User) ?? "unknown";
         var row = await db.WorkdayOverrides.SingleOrDefaultAsync(x => x.Date == date.Date);
-        var defaultValue = WorkCalendarService.DefaultIsWorking(date);
-        if (row is null) db.WorkdayOverrides.Add(new Models.WorkdayOverride { Date = date.Date, IsWorking = !defaultValue, UpdatedByEmail = email });
-        else { row.IsWorking = !row.IsWorking; row.UpdatedByEmail = email; row.UpdatedAtUtc = DateTime.UtcNow; }
+        if (status == "default")
+        {
+            if (row is not null) db.WorkdayOverrides.Remove(row);
+        }
+        else
+        {
+            row ??= new Models.WorkdayOverride { Date = date.Date };
+            row.IsWorking = status != "off";
+            row.IsHalfDay = status == "half";
+            row.UpdatedByEmail = email;
+            row.UpdatedAtUtc = DateTime.UtcNow;
+            if (row.Id == 0) db.WorkdayOverrides.Add(row);
+        }
         await db.SaveChangesAsync(); return RedirectToPage(new { year, month });
     }
 }
