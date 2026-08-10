@@ -6,6 +6,7 @@ public sealed class InventoryItem
     public string PartNumber { get; set; } = "";
     public string Description { get; set; } = "";
     public string Tags { get; set; } = "";
+    public string Keywords { get; set; } = "";
     public decimal? UnitCost { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;

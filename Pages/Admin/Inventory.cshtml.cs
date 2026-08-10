@@ -9,6 +9,7 @@ public sealed class InventoryModel(InventoryService inventory, CurrentUserServic
     [BindProperty] public string PartNumber { get; set; } = "";
     [BindProperty] public string Description { get; set; } = "";
     [BindProperty] public string? Tags { get; set; }
+    [BindProperty] public string? Keywords { get; set; }
     [BindProperty] public decimal? UnitCost { get; set; }
     [BindProperty] public string LocationName { get; set; } = "";
     [BindProperty] public int Quantity { get; set; } = 1;
@@ -37,7 +38,7 @@ public sealed class InventoryModel(InventoryService inventory, CurrentUserServic
 
         try
         {
-            await inventory.AddOrIncreaseAsync(PartNumber, Description, Tags, UnitCost, LocationName, Quantity, user.Email, HttpContext.RequestAborted);
+            await inventory.AddOrIncreaseAsync(PartNumber, Description, Tags, Keywords, UnitCost, LocationName, Quantity, user.Email, HttpContext.RequestAborted);
             TempData["Message"] = "Inventory item saved and quantity added.";
             return RedirectToPage();
         }

@@ -16,7 +16,7 @@
 <form method="get" class="row g-2 mb-4">
     <div class="col-md-8 col-lg-6">
         <label for="inventory-search" class="visually-hidden">@T.Get(Context, "Search")</label>
-        <input id="inventory-search" name="q" value="@Model.Q" class="form-control" placeholder="@T.Get(Context, "Part number, description or tag")" />
+        <input id="inventory-search" name="q" value="@Model.Q" class="form-control" placeholder="@T.Get(Context, "Part number, description, tag or keyword")" />
     </div>
     <div class="col-auto">
         <button class="btn btn-primary" type="submit">@T.Get(Context, "Search")</button>
@@ -29,9 +29,86 @@
     }
 </form>
 
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="h4">@T.Get(Context, "Take from stock")</h2>
+        <p class="text-muted small">@T.Get(Context, "Select a part number, location and quantity. The operation is recorded with your name and date.")</p>
+        <form method="post" asp-page-handler="Take" class="row g-3" id="take-stock-form">
+            <div class="col-md-5">
+                <label for="TakeItemId" class="form-label">@T.Get(Context, "Part number")</label>
+                <select id="TakeItemId" name="TakeItemId" class="form-select" required>
+                    <option value="">@T.Get(Context, "Select part")</option>
+                    @foreach (var item in Model.TakeItems)
+                    {
+                        <option value="@item.Id">@item.PartNumber — @item.Description (@item.TotalQuantity)</option>
+                    }
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label for="TakeLocationId" class="form-label">@T.Get(Context, "From location")</label>
+                <select id="TakeLocationId" name="TakeLocationId" class="form-select" required disabled>
+                    <option value="">@T.Get(Context, "Select part first")</option>
+                    @foreach (var item in Model.TakeItems)
+                    {
+                        foreach (var stock in item.Stocks)
+                        {
+                            <option value="@stock.LocationId" data-item-id="@item.Id" data-quantity="@stock.Quantity" hidden>
+                                @stock.LocationName (@stock.Quantity)
+                            </option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label for="TakeQuantity" class="form-label">@T.Get(Context, "Quantity")</label>
+                <input id="TakeQuantity" name="TakeQuantity" class="form-control" type="number" min="1" value="1" required disabled />
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                <button class="btn btn-primary w-100" type="submit" id="take-stock-button" disabled>@T.Get(Context, "Take")</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 @if (Model.Items.Count == 0)
 {
     <p class="text-muted">@T.Get(Context, "No inventory items found.")</p>
+}
+
+@section Scripts {
+    <script>
+        (() => {
+            const itemSelect = document.getElementById('TakeItemId');
+            const locationSelect = document.getElementById('TakeLocationId');
+            const quantityInput = document.getElementById('TakeQuantity');
+            const takeButton = document.getElementById('take-stock-button');
+            if (!itemSelect || !locationSelect || !quantityInput || !takeButton) return;
+
+            const updateLocations = () => {
+                const itemId = itemSelect.value;
+                let firstAvailable = null;
+                for (const option of locationSelect.options) {
+                    const matches = option.dataset.itemId === itemId;
+                    option.hidden = !matches;
+                    if (matches && firstAvailable === null) firstAvailable = option;
+                }
+                locationSelect.value = firstAvailable?.value ?? '';
+                locationSelect.disabled = !firstAvailable;
+                quantityInput.disabled = !firstAvailable;
+                takeButton.disabled = !firstAvailable;
+                quantityInput.max = firstAvailable?.dataset.quantity ?? '';
+                if (firstAvailable) quantityInput.value = Math.min(Number(quantityInput.value) || 1, Number(firstAvailable.dataset.quantity));
+            };
+
+            itemSelect.addEventListener('change', updateLocations);
+            locationSelect.addEventListener('change', () => {
+                const option = locationSelect.selectedOptions[0];
+                quantityInput.max = option?.dataset.quantity ?? '';
+                if (option) quantityInput.value = Math.min(Number(quantityInput.value) || 1, Number(option.dataset.quantity));
+            });
+            updateLocations();
+        })();
+    </script>
 }
 else
 {
@@ -42,6 +119,7 @@ else
                     <th>@T.Get(Context, "Part number")</th>
                     <th>@T.Get(Context, "Description")</th>
                     <th>@T.Get(Context, "Tags")</th>
+                    <th>@T.Get(Context, "Keywords")</th>
                     <th>@T.Get(Context, "Total")</th>
                     <th>@T.Get(Context, "Locations and quantity")</th>
                 </tr>
@@ -53,6 +131,7 @@ else
                     <td><strong>@item.PartNumber</strong></td>
                     <td>@item.Description</td>
                     <td>@(string.IsNullOrWhiteSpace(item.Tags) ? "—" : item.Tags)</td>
+                    <td>@(string.IsNullOrWhiteSpace(item.Keywords) ? "—" : item.Keywords)</td>
                     <td>@item.TotalQuantity</td>
                     <td>
                         @if (item.Stocks.Count == 0)
@@ -67,7 +146,7 @@ else
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
                                     <span>@stock.LocationName</span>
                                     <span class="badge text-bg-secondary">@stock.Quantity</span>
-                                    <form method="post" asp-page-handler="Take" class="d-inline">
+                                    <form method="post" asp-page-handler="QuickTake" class="d-inline">
                                         <input type="hidden" name="stockId" value="@stock.StockId" />
                                         <input type="hidden" name="q" value="@Model.Q" />
                                         <button class="btn btn-sm btn-outline-primary" type="submit">@T.Get(Context, "I took one")</button>

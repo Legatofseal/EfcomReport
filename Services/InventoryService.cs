@@ -18,6 +18,7 @@ public sealed record InventoryItemView(
     string PartNumber,
     string Description,
     string Tags,
+    string Keywords,
     decimal? UnitCost,
     IReadOnlyList<InventoryStockView> Stocks)
 {
@@ -51,13 +52,21 @@ public sealed class InventoryService(AppDbContext db)
             .ThenInclude(x => x.Location)
             .Where(x => x.IsActive);
 
-        var term = search?.Trim().ToLowerInvariant();
-        if (!string.IsNullOrWhiteSpace(term))
+        var terms = (search ?? "")
+            .Split([',', ';', ' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(x => x.ToLowerInvariant())
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+        if (terms.Length > 0)
         {
-            query = query.Where(x =>
-                x.PartNumber.ToLower().Contains(term) ||
-                x.Description.ToLower().Contains(term) ||
-                x.Tags.ToLower().Contains(term));
+            foreach (var term in terms)
+            {
+                query = query.Where(x =>
+                    x.PartNumber.ToLower().Contains(term) ||
+                    x.Description.ToLower().Contains(term) ||
+                    x.Tags.ToLower().Contains(term) ||
+                    x.Keywords.ToLower().Contains(term));
+            }
         }
 
         var items = await query.OrderBy(x => x.PartNumber).ToListAsync();
@@ -103,6 +112,7 @@ public sealed class InventoryService(AppDbContext db)
         string partNumber,
         string description,
         string? tags,
+        string? keywords,
         decimal? unitCost,
         string locationName,
         int quantity,
@@ -113,6 +123,7 @@ public sealed class InventoryService(AppDbContext db)
         description = description.Trim();
         locationName = locationName.Trim();
         tags = tags?.Trim() ?? "";
+        keywords = keywords?.Trim() ?? "";
 
         if (string.IsNullOrWhiteSpace(partNumber)) throw new InvalidOperationException("Part number is required.");
         if (string.IsNullOrWhiteSpace(description)) throw new InvalidOperationException("Description is required.");
@@ -129,6 +140,7 @@ public sealed class InventoryService(AppDbContext db)
                 PartNumber = partNumber,
                 Description = description,
                 Tags = tags,
+                Keywords = keywords,
                 UnitCost = unitCost,
                 CreatedByEmail = performedByEmail,
                 CreatedAtUtc = DateTime.UtcNow,
@@ -142,6 +154,7 @@ public sealed class InventoryService(AppDbContext db)
             item.IsActive = true;
             item.Description = description;
             item.Tags = tags;
+            item.Keywords = keywords;
             item.UnitCost = unitCost;
             item.UpdatedAtUtc = DateTime.UtcNow;
         }
@@ -183,21 +196,35 @@ public sealed class InventoryService(AppDbContext db)
 
     public async Task TakeAsync(int stockId, string performedByEmail, CancellationToken cancellationToken = default)
     {
+        var stock = await db.InventoryStocks.AsNoTracking().SingleOrDefaultAsync(x => x.Id == stockId, cancellationToken);
+        if (stock is null) throw new InvalidOperationException("The selected stock record was not found.");
+        await TakeAsync(stock.ItemId, stock.LocationId, 1, performedByEmail, cancellationToken);
+    }
+
+    public async Task TakeAsync(
+        int itemId,
+        int locationId,
+        int quantity,
+        string performedByEmail,
+        CancellationToken cancellationToken = default)
+    {
+        if (quantity <= 0) throw new InvalidOperationException("Quantity must be greater than zero.");
+
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
         var stock = await db.InventoryStocks
             .Include(x => x.Item)
             .Include(x => x.Location)
-            .SingleOrDefaultAsync(x => x.Id == stockId, cancellationToken);
+            .SingleOrDefaultAsync(x => x.ItemId == itemId && x.LocationId == locationId, cancellationToken);
         if (stock is null) throw new InvalidOperationException("The selected stock record was not found.");
-        if (stock.Quantity <= 0) throw new InvalidOperationException("There is no quantity left in this location.");
+        if (stock.Quantity < quantity) throw new InvalidOperationException("There is not enough quantity in this location.");
 
-        stock.Quantity--;
+        stock.Quantity -= quantity;
         stock.UpdatedAtUtc = DateTime.UtcNow;
         db.InventoryMovements.Add(new InventoryMovement
         {
             ItemId = stock.ItemId,
             FromLocationId = stock.LocationId,
-            Quantity = 1,
+            Quantity = quantity,
             MovementType = InventoryMovementTypes.Take,
             PerformedByEmail = performedByEmail,
             CreatedAtUtc = DateTime.UtcNow
@@ -271,6 +298,7 @@ public sealed class InventoryService(AppDbContext db)
         item.PartNumber,
         item.Description,
         item.Tags,
+        item.Keywords,
         item.UnitCost,
         item.Stocks
             .Where(x => x.Quantity > 0 && x.Location.IsActive)

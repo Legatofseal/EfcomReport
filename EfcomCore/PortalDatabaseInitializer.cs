@@ -57,6 +57,7 @@ public static class PortalDatabaseInitializer
                 "PartNumber" TEXT NOT NULL COLLATE NOCASE,
                 "Description" TEXT NOT NULL,
                 "Tags" TEXT NOT NULL,
+                "Keywords" TEXT NOT NULL,
                 "UnitCost" TEXT NULL,
                 "IsActive" INTEGER NOT NULL,
                 "CreatedAtUtc" TEXT NOT NULL,
@@ -178,6 +179,7 @@ public static class PortalDatabaseInitializer
         EnsureSqliteColumn(db, "MonthlySubmissions", "IsConfirmed", "INTEGER NOT NULL DEFAULT 0");
         EnsureSqliteColumn(db, "MonthlySubmissions", "ConfirmedAtUtc", "TEXT NULL");
         EnsureSqliteColumn(db, "InvoiceEntries", "IsPlaceholder", "INTEGER NOT NULL DEFAULT 0");
+        EnsureSqliteColumn(db, "InventoryItems", "Keywords", "TEXT NOT NULL DEFAULT ''");
         EnsureSqliteColumn(db, "WorkdayOverrides", "IsHalfDay", "INTEGER NOT NULL DEFAULT 0");
     }
 
