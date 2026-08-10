@@ -34,6 +34,12 @@ public sealed class CreateModel(
     [BindProperty, StringLength(10)]
     public string CurrencySymbol { get; set; } = "";
 
+    [BindProperty]
+    public string CurrencyChoice { get; set; } = "ILS";
+
+    [BindProperty, StringLength(10)]
+    public string OtherCurrencySymbol { get; set; } = "";
+
     [BindProperty, Range(typeof(decimal), "0.01", "999999999999")]
     public decimal Amount { get; set; }
 
@@ -51,6 +57,8 @@ public sealed class CreateModel(
 
     public async Task OnGetAsync()
     {
+        CurrencyChoice = "ILS";
+        CurrencySymbol = "₪";
         await LoadOptionsAsync();
         RecipientEmail = RecipientOptions.FirstOrDefault(x => x.IsDefault)?.Email
             ?? RecipientOptions.FirstOrDefault()?.Email
@@ -80,9 +88,20 @@ public sealed class CreateModel(
         RecipientEmail = RecipientEmail.Trim();
         Customer = Customer.Trim();
         InvoiceNumber = InvoiceNumber.Trim();
-        CurrencySymbol = CurrencySymbol.Trim();
+        CurrencyChoice = CurrencyChoice.Trim();
+        OtherCurrencySymbol = OtherCurrencySymbol.Trim();
+        CurrencySymbol = CurrencyChoice switch
+        {
+            "USD" => "$",
+            "EUR" => "€",
+            "Other" => OtherCurrencySymbol,
+            _ => "₪"
+        };
         PaymentType = PaymentType.Trim();
         Comments = string.IsNullOrWhiteSpace(Comments) ? null : Comments.Trim();
+
+        if (CurrencyChoice == "Other" && string.IsNullOrWhiteSpace(OtherCurrencySymbol))
+            ModelState.AddModelError(nameof(OtherCurrencySymbol), "Enter a currency symbol.");
 
         await LoadOptionsAsync();
         if (HasInvoiceRecipients)

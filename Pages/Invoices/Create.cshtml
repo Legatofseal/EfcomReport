@@ -51,9 +51,16 @@
         <span asp-validation-for="InvoiceNumber" class="text-danger"></span>
     </div>
     <div class="col-md-4">
-        <label asp-for="CurrencySymbol" class="form-label">@T.Get(Context, "Currency symbol") <span class="text-muted">(@T.Get(Context, "optional"))</span></label>
-        <input asp-for="CurrencySymbol" class="form-control" placeholder="$" />
-        <span asp-validation-for="CurrencySymbol" class="text-danger"></span>
+        <label asp-for="CurrencyChoice" class="form-label">@T.Get(Context, "Currency")</label>
+        <select asp-for="CurrencyChoice" id="CurrencyChoice" class="form-select">
+            <option value="ILS">ILS (₪)</option>
+            <option value="USD">USD ($)</option>
+            <option value="EUR">EUR (€)</option>
+            <option value="Other">@T.Get(Context, "Other")</option>
+        </select>
+        <input asp-for="CurrencySymbol" type="hidden" id="CurrencySymbol" />
+        <input asp-for="OtherCurrencySymbol" id="OtherCurrencySymbol" class="form-control mt-2 d-none" placeholder="@T.Get(Context, "Other currency symbol")" disabled />
+        <span asp-validation-for="OtherCurrencySymbol" class="text-danger"></span>
     </div>
     <div class="col-md-4">
         <label asp-for="Amount" class="form-label">@T.Get(Context, "Amount")</label>
@@ -114,8 +121,28 @@
             const fileInput = document.getElementById('Attachment');
             const status = document.getElementById('extraction-status');
             const warnings = document.getElementById('extraction-warnings');
+            const currencyChoice = document.getElementById('CurrencyChoice');
+            const currencySymbol = document.getElementById('CurrencySymbol');
+            const otherCurrencySymbol = document.getElementById('OtherCurrencySymbol');
             const form = button?.closest('form');
-            if (!button || !fileInput || !status || !warnings || !form) return;
+            if (!button || !fileInput || !status || !warnings || !form || !currencyChoice || !currencySymbol || !otherCurrencySymbol) return;
+
+            const syncCurrency = () => {
+                const isOther = currencyChoice.value === 'Other';
+                otherCurrencySymbol.classList.toggle('d-none', !isOther);
+                otherCurrencySymbol.disabled = !isOther;
+                currencySymbol.value = currencyChoice.value === 'USD'
+                    ? '$'
+                    : currencyChoice.value === 'EUR'
+                        ? '€'
+                        : currencyChoice.value === 'Other'
+                            ? otherCurrencySymbol.value
+                            : '₪';
+            };
+
+            currencyChoice.addEventListener('change', syncCurrency);
+            otherCurrencySymbol.addEventListener('input', syncCurrency);
+            syncCurrency();
 
             button.addEventListener('click', async () => {
                 const file = fileInput.files?.[0];
@@ -152,6 +179,19 @@
                             const input = document.getElementById(name);
                             if (input) input.value = value;
                         }
+                    }
+                    if (result.currencySymbol) {
+                        const detectedCurrency = result.currencySymbol.trim();
+                        const preset = detectedCurrency === '$'
+                            ? 'USD'
+                            : detectedCurrency === '€'
+                                ? 'EUR'
+                                : detectedCurrency === '₪'
+                                    ? 'ILS'
+                                    : 'Other';
+                        currencyChoice.value = preset;
+                        if (preset === 'Other') otherCurrencySymbol.value = detectedCurrency;
+                        syncCurrency();
                     }
                     status.textContent = result.message || 'Fields filled. Check them before submitting.';
                     status.className = 'small text-success';

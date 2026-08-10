@@ -49,16 +49,14 @@
             }
             <a class="sidebar-link" asp-page="/Invoices/Create">@T.Get(Context, "New invoice entry")</a>
 
-            <div class="sidebar-heading mt-4">@T.Get(Context, "Inventory")</div>
-            <a class="sidebar-link" asp-page="/Inventory/Index">@T.Get(Context, "Inventory")</a>
-
             @if (User.IsInRole("Admin"))
             {
                 <div class="sidebar-heading mt-4">@T.Get(Context, "Administration")</div>
                 <a class="sidebar-link" asp-page="/Admin/Index">@T.Get(Context, "Administration")</a>
                 <a class="sidebar-link" asp-page="/Admin/Calendar">@T.Get(Context, "Work calendar")</a>
                 <a class="sidebar-link" asp-page="/Admin/InvoiceRecipients">@T.Get(Context, "Invoice recipients")</a>
-                <a class="sidebar-link" asp-page="/Admin/Inventory">@T.Get(Context, "Inventory management")</a>
+                <a class="sidebar-link" asp-page="/Admin/InvoiceCustomers">@T.Get(Context, "Invoice customers")</a>
+                <a class="sidebar-link" asp-page="/Admin/PaymentTypes">@T.Get(Context, "Payment types")</a>
             }
         }
     </aside>
