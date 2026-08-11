@@ -70,8 +70,7 @@ public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCa
             throw;
         }
         await submissions.MarkRangeAsync(employeeId, StartDate, EndDate);
-        var countedWorkdays = await calendar.CountAsync(StartDate, EndDate);
-        if (IsHalfDay) countedWorkdays = Math.Min(countedWorkdays, 0.5m);
+        var countedWorkdays = await calendar.CountAbsenceAsync(StartDate, EndDate, IsHalfDay);
         TempData["Message"] = $"Absence saved. Counted workdays: {countedWorkdays:0.##}.";
         return RedirectToPage("/Index", new { month = StartDate.Month, year = StartDate.Year });
     }

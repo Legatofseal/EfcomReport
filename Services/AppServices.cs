@@ -45,15 +45,29 @@ public sealed class WorkCalendarService(AppDbContext db)
         return overrideDay?.IsWorking ?? DefaultSchedule(date).IsWorking;
     }
 
-    public async Task<decimal> CountAsync(DateTime start, DateTime end)
+    public Task<decimal> CountAsync(DateTime start, DateTime end) => CountAbsenceAsync(start, end, false);
+
+    public async Task<decimal> CountAbsenceAsync(DateTime start, DateTime end, bool isHalfDay)
     {
         if (end.Date < start.Date) return 0;
         var overrides = await OverridesAsync(start, end);
+        return CountAbsence(start, end, isHalfDay, overrides);
+    }
+
+    public static decimal CountAbsence(
+        DateTime start,
+        DateTime end,
+        bool isHalfDay,
+        IReadOnlyDictionary<DateTime, CalendarSchedule> overrides)
+    {
+        if (end.Date < start.Date) return 0;
         var count = 0m;
+        var absenceFraction = isHalfDay ? 0.5m : 1m;
         for (var day = start.Date; day <= end.Date; day = day.AddDays(1))
         {
             var schedule = overrides.TryGetValue(day, out var value) ? value : DefaultSchedule(day);
-            if (schedule.IsWorking) count += schedule.IsHalfDay ? 0.5m : 1m;
+            if (schedule.IsWorking)
+                count += Math.Min(schedule.IsHalfDay ? 0.5m : 1m, absenceFraction);
         }
         return count;
     }

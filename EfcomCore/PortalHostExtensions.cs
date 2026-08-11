@@ -48,6 +48,8 @@ public static class PortalHostExtensions
         {
             options.Cookie.Name = "Efcom.Auth";
             options.Cookie.Path = "/";
+            options.ExpireTimeSpan = TimeSpan.FromDays(30);
+            options.SlidingExpiration = true;
             options.LoginPath = "/account/login";
             options.AccessDeniedPath = "/account/access-denied";
         });

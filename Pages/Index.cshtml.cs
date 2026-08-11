@@ -9,12 +9,13 @@ using Microsoft.EntityFrameworkCore;
 namespace EfcomReport.Pages;
 
 [Authorize]
-public class IndexModel(AppDbContext db, CurrentUserService currentUser, SubmissionService submissions) : PageModel
+public class IndexModel(AppDbContext db, CurrentUserService currentUser, SubmissionService submissions, WorkCalendarService calendar) : PageModel
 {
     [BindProperty(SupportsGet = true)] public int? Month { get; set; }
     [BindProperty(SupportsGet = true)] public int? Year { get; set; }
     public AppUser? UserRecord { get; private set; }
     public List<AbsenceRequest> Requests { get; private set; } = [];
+    public Dictionary<int, decimal> RequestDays { get; private set; } = [];
     public string SubmissionState { get; private set; } = "Not confirmed";
     public DateTime? ConfirmedAtUtc { get; private set; }
     public int CurrentMonth => Month ?? DateTime.Today.Month;
@@ -29,6 +30,16 @@ public class IndexModel(AppDbContext db, CurrentUserService currentUser, Submiss
         Requests = await db.AbsenceRequests.Include(x => x.LeaveType)
             .Where(x => x.EmployeeId == employeeId && !x.IsCancelled && x.StartDate <= end && x.EndDate >= start)
             .OrderBy(x => x.StartDate).ToListAsync();
+        var calendarDays = await calendar.MonthAsync(CurrentYear, CurrentMonth);
+        var schedules = calendarDays.ToDictionary(
+            x => x.Date.Date,
+            x => new CalendarSchedule(x.IsWorking, x.IsHalfDay));
+        foreach (var request in Requests)
+        {
+            var requestStart = request.StartDate.Date < start ? start : request.StartDate.Date;
+            var requestEnd = request.EndDate.Date > end ? end : request.EndDate.Date;
+            RequestDays[request.Id] = WorkCalendarService.CountAbsence(requestStart, requestEnd, request.IsHalfDay, schedules);
+        }
         var submission = await db.MonthlySubmissions.SingleOrDefaultAsync(x => x.EmployeeId == employeeId && x.Year == CurrentYear && x.Month == CurrentMonth);
         SubmissionState = submission?.IsConfirmed == true ? "Confirmed" : "Not confirmed";
         ConfirmedAtUtc = submission?.ConfirmedAtUtc;

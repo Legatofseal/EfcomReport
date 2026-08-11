@@ -12,7 +12,7 @@
         @if (Model.RecipientOptions.Count > 0)
         {
             <select asp-for="RecipientEmail" class="form-select">
-                <option value="">@T.Get(Context, "Select invoice recipient")</option>
+                <option value="" disabled>@T.Get(Context, "Select invoice recipient")</option>
                 @foreach (var recipient in Model.RecipientOptions)
                 {
                     <option value="@recipient.Email">@recipient.Name (@recipient.Email)@(recipient.IsDefault ? $" - {T.Get(Context, "Default")}" : "")</option>
@@ -31,7 +31,7 @@
         @if (Model.CustomerOptions.Count > 0)
         {
             <select asp-for="Customer" class="form-select">
-                <option value="">@T.Get(Context, "Select invoice customer")</option>
+                <option value="" disabled>@T.Get(Context, "Select invoice customer")</option>
                 @foreach (var customer in Model.CustomerOptions)
                 {
                     <option value="@customer.Name">@customer.Name</option>
@@ -72,7 +72,7 @@
         @if (Model.PaymentTypeOptions.Count > 0)
         {
             <select asp-for="PaymentType" class="form-select">
-                <option value="">@T.Get(Context, "Select payment type")</option>
+                <option value="" disabled>@T.Get(Context, "Select payment type")</option>
                 @foreach (var option in Model.PaymentTypeOptions)
                 {
                     <option value="@option.Name">@option.Name</option>

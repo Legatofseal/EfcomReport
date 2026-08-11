@@ -38,7 +38,7 @@ public sealed class CreateModel(
     public string CurrencyChoice { get; set; } = "ILS";
 
     [BindProperty, StringLength(10)]
-    public string OtherCurrencySymbol { get; set; } = "";
+    public string? OtherCurrencySymbol { get; set; }
 
     [BindProperty, Range(typeof(decimal), "0.01", "999999999999")]
     public decimal Amount { get; set; }
@@ -89,12 +89,12 @@ public sealed class CreateModel(
         Customer = Customer.Trim();
         InvoiceNumber = InvoiceNumber.Trim();
         CurrencyChoice = CurrencyChoice.Trim();
-        OtherCurrencySymbol = OtherCurrencySymbol.Trim();
+        OtherCurrencySymbol = OtherCurrencySymbol?.Trim();
         CurrencySymbol = CurrencyChoice switch
         {
             "USD" => "$",
             "EUR" => "€",
-            "Other" => OtherCurrencySymbol,
+            "Other" => OtherCurrencySymbol ?? "",
             _ => "₪"
         };
         PaymentType = PaymentType.Trim();
