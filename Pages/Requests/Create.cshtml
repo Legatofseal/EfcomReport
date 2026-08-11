@@ -4,9 +4,27 @@
 <h1>@T.Get(Context, "Add absence")</h1><p class="text-muted">@T.Get(Context, "Workdays are calculated from the administrator calendar.")</p>
 <form method="post" enctype="multipart/form-data" class="form-card"><div asp-validation-summary="ModelOnly" class="text-danger"></div>
 <div class="mb-3"><label asp-for="LeaveTypeId" class="form-label">@T.Get(Context, "Leave type")</label><select asp-for="LeaveTypeId" class="form-select"><option value="">@T.Get(Context, "Select...")</option>@foreach (var type in Model.LeaveTypes) { <option value="@type.Id">@type.Name</option> }</select></div>
-<div class="row"><div class="col-md-6 mb-3"><label asp-for="StartDate" class="form-label">@T.Get(Context, "Start date")</label><input asp-for="StartDate" class="form-control" /></div><div class="col-md-6 mb-3"><label asp-for="EndDate" class="form-label">@T.Get(Context, "End date")</label><input asp-for="EndDate" class="form-control" /></div></div>
+<div class="row"><div class="col-md-6 mb-3"><label asp-for="StartDate" class="form-label">@T.Get(Context, "Start date")</label><input asp-for="StartDate" class="form-control" /></div><div class="col-md-6 mb-3"><label asp-for="EndDate" class="form-label">@T.Get(Context, "End date")</label><input asp-for="EndDate" class="form-control" min="@Model.StartDate.ToString("yyyy-MM-dd")" /></div></div>
 <div class="form-check mb-3"><input asp-for="IsHalfDay" class="form-check-input" /><label asp-for="IsHalfDay" class="form-check-label">@T.Get(Context, "Half-day absence")</label><div class="form-text">@T.Get(Context, "Use this for a half-day absence on one date.")</div><span asp-validation-for="IsHalfDay" class="text-danger small"></span></div>
 <div class="mb-3"><label asp-for="Attachment" class="form-label">@T.Get(Context, "Sick-leave document") <span class="text-muted">@T.Get(Context, "(optional)")</span></label><input asp-for="Attachment" class="form-control" accept=".pdf,.jpg,.jpeg,.png" /><div class="form-text">@T.Get(Context, "Only for Sick Leave. PDF, JPG or PNG, up to 10 MB.")</div><span asp-validation-for="Attachment" class="text-danger small"></span></div>
 <div class="mb-3"><label asp-for="Notes" class="form-label">@T.Get(Context, "Notes")</label><textarea asp-for="Notes" class="form-control" rows="3"></textarea></div>
 <button class="btn btn-primary" type="submit">@T.Get(Context, "Save")</button> <a class="btn btn-link" asp-page="/Index">@T.Get(Context, "Cancel")</a></form>
-@section Scripts { <partial name="_ValidationScriptsPartial" /> }
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const start = document.getElementById('StartDate');
+            const end = document.getElementById('EndDate');
+            if (!start || !end) return;
+
+            const syncEndDate = () => {
+                end.min = start.value;
+                if (start.value && end.value && end.value < start.value) end.value = start.value;
+            };
+
+            start.addEventListener('input', syncEndDate);
+            start.addEventListener('change', syncEndDate);
+            syncEndDate();
+        })();
+    </script>
+}
