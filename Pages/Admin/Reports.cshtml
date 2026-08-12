@@ -5,12 +5,12 @@
 
 <h1>@T.Get(Context, "Reports")</h1>
 
-<form method="get" class="card mb-3">
+<form method="get" class="card mb-3" id="report-period-form">
     <div class="card-body">
         <div class="row g-3 align-items-end">
             <div class="col-md-3">
                 <label class="form-label">@T.Get(Context, "Start month")</label>
-                <select class="form-select" name="startMonth" onchange="this.form.submit()">
+                <select class="form-select" id="StartMonth" name="startMonth" onchange="syncReportPeriod(); this.form.submit()">
                     @for (var month = 1; month <= 12; month++)
                     {
                         <option value="@month" selected="@(Model.CurrentStartMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option>
@@ -19,20 +19,20 @@
             </div>
             <div class="col-md-2">
                 <label class="form-label">@T.Get(Context, "Start year")</label>
-                <input class="form-control" type="number" name="startYear" min="2020" max="2100" value="@Model.CurrentStartYear" onchange="this.form.submit()" />
+                <input class="form-control" id="StartYear" type="number" name="startYear" min="2020" max="2100" value="@Model.CurrentStartYear" onchange="syncReportPeriod(); this.form.submit()" />
             </div>
             <div class="col-md-3">
                 <label class="form-label">@T.Get(Context, "End month")</label>
-                <select class="form-select" name="endMonth" onchange="this.form.submit()">
+                <select class="form-select" id="EndMonth" name="endMonth" onchange="syncReportPeriod(); this.form.submit()">
                     @for (var month = 1; month <= 12; month++)
                     {
-                        <option value="@month" selected="@(Model.CurrentEndMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option>
+                        <option value="@month" disabled="@(Model.CurrentStartYear == Model.CurrentEndYear && month < Model.CurrentStartMonth ? "disabled" : null)" selected="@(Model.CurrentEndMonth == month ? "selected" : null)">@T.MonthName(Context, month)</option>
                     }
                 </select>
             </div>
             <div class="col-md-2">
                 <label class="form-label">@T.Get(Context, "End year")</label>
-                <input class="form-control" type="number" name="endYear" min="2020" max="2100" value="@Model.CurrentEndYear" onchange="this.form.submit()" />
+                <input class="form-control" id="EndYear" type="number" name="endYear" min="@Model.CurrentStartYear" max="2100" value="@Model.CurrentEndYear" onchange="syncReportPeriod(); this.form.submit()" />
             </div>
             <div class="col-md-2">
                 <button class="btn btn-primary w-100" type="submit">@T.Get(Context, "Apply filters")</button>
@@ -56,6 +56,44 @@
         </div>
     </div>
 </form>
+
+<script>
+    (() => {
+        const form = document.getElementById('report-period-form');
+        const startMonth = document.getElementById('StartMonth');
+        const startYear = document.getElementById('StartYear');
+        const endMonth = document.getElementById('EndMonth');
+        const endYear = document.getElementById('EndYear');
+        if (!form || !startMonth || !startYear || !endMonth || !endYear) return;
+
+        const sync = () => {
+            const startMonthValue = Number.parseInt(startMonth.value, 10);
+            const startYearValue = Number.parseInt(startYear.value, 10);
+            let endMonthValue = Number.parseInt(endMonth.value, 10);
+            let endYearValue = Number.parseInt(endYear.value, 10);
+            if (Number.isNaN(startMonthValue) || Number.isNaN(startYearValue)) return;
+
+            endYear.min = startYear.value;
+            if (Number.isNaN(endYearValue) || endYearValue < startYearValue) {
+                endYear.value = startYear.value;
+                endYearValue = startYearValue;
+            }
+
+            const sameYear = endYearValue === startYearValue;
+            [...endMonth.options].forEach(option => {
+                option.disabled = sameYear && Number.parseInt(option.value, 10) < startMonthValue;
+            });
+
+            if (sameYear && (Number.isNaN(endMonthValue) || endMonthValue < startMonthValue)) {
+                endMonth.value = startMonth.value;
+            }
+        };
+
+        window.syncReportPeriod = sync;
+        [startMonth, startYear, endMonth, endYear].forEach(control => control.addEventListener('change', sync));
+        sync();
+    })();
+</script>
 
 <div asp-validation-summary="ModelOnly" class="text-danger"></div>
 
