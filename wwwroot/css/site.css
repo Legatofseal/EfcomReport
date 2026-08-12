@@ -32,6 +32,11 @@ html[dir="rtl"] .language-switcher { direction: rtl; }
 .calendar-legend-item.working { background: #dcfce7; color: #166534; }
 .calendar-legend-item.half-day { background: linear-gradient(to right, #dcfce7 0 50%, #fee2e2 50% 100%); color: #334155; }
 .calendar-legend-item.not-working { background: #fee2e2; color: #991b1b; }
+.report-sort-button { border: 0; background: transparent; padding: 0; font: inherit; font-weight: 700; text-align: left; color: inherit; cursor: pointer; }
+.report-sort-button::after { content: " ↕"; color: #94a3b8; font-size: .8em; }
+.report-sort-button.active::after { content: " ↑"; color: #0d6efd; }
+.report-sort-button.active[data-sort-direction="descending"]::after { content: " ↓"; }
+.report-sort-button:hover, .report-sort-button:focus-visible { color: #0d6efd; text-decoration: underline; }
 @media (max-width: 767.98px) {
     .portal-topbar-inner { align-items: flex-start; }
     .portal-topbar-inner > .navbar-nav { flex-wrap: wrap; justify-content: flex-end; font-size: .85rem; }

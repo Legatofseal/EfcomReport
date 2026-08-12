@@ -1,5 +1,6 @@
 @page
 @model EfcomReport.Pages.Admin.ReportsModel
+@using System.Globalization
 @{ ViewData["Title"] = T.Get(Context, "Reports"); }
 
 <h1>@T.Get(Context, "Reports")</h1>
@@ -111,17 +112,17 @@
     </form>
 
     <div class="table-responsive">
-        <table class="table table-sm table-striped">
+        <table class="table table-sm table-striped report-table">
             <thead>
                 <tr>
-                    <th>@T.Get(Context, "Employee")</th>
+                    <th scope="col"><button type="button" class="report-sort-button" data-sort-type="text">@T.Get(Context, "Employee")</button></th>
                     @foreach (var type in Model.Report.Types)
                     {
-                        <th>@type.Name @T.Get(Context, "Days")</th>
-                        <th>@type.Name @T.Get(Context, "Entries")</th>
+                        <th scope="col"><button type="button" class="report-sort-button" data-sort-type="number">@type.Name @T.Get(Context, "Days")</button></th>
+                        <th scope="col"><button type="button" class="report-sort-button" data-sort-type="number">@type.Name @T.Get(Context, "Entries")</button></th>
                     }
-                    <th>@T.Get(Context, "Total leave days")</th>
-                    <th>@T.Get(Context, "Submission status")</th>
+                    <th scope="col"><button type="button" class="report-sort-button" data-sort-type="number">@T.Get(Context, "Total leave days")</button></th>
+                    <th scope="col"><button type="button" class="report-sort-button" data-sort-type="text">@T.Get(Context, "Submission status")</button></th>
                 </tr>
             </thead>
             <tbody>
@@ -129,14 +130,16 @@
                 {
                     var hasMissingSubmission = row.SubmissionStatuses.Any(x => x.State == "Not confirmed");
                     <tr class="@(hasMissingSubmission ? "table-danger" : "")">
-                        <td>@row.EmployeeName</td>
+                        <td data-sort-value="@row.EmployeeName">@row.EmployeeName</td>
                         @foreach (var type in Model.Report.Types)
                         {
-                            <td>@row.DaysByType.GetValueOrDefault(type.Name).ToString("0.##")</td>
-                            <td>@row.EntryCounts.GetValueOrDefault(type.Name)</td>
+                            var days = row.DaysByType.GetValueOrDefault(type.Name);
+                            var entries = row.EntryCounts.GetValueOrDefault(type.Name);
+                            <td data-sort-value="@days.ToString(CultureInfo.InvariantCulture)">@days.ToString("0.##")</td>
+                            <td data-sort-value="@entries">@entries</td>
                         }
-                        <td>@row.TotalDays.ToString("0.##")</td>
-                        <td>
+                        <td data-sort-value="@row.TotalDays.ToString(CultureInfo.InvariantCulture)">@row.TotalDays.ToString("0.##")</td>
+                        <td data-sort-value="@(hasMissingSubmission ? "Not confirmed" : "Confirmed")">
                             @foreach (var status in row.SubmissionStatuses)
                             {
                                 <div class="@(status.State == "Not confirmed" ? "text-danger fw-semibold" : "")">
@@ -170,4 +173,59 @@
             </tbody>
         </table>
     </div>
+}
+
+@section Scripts {
+    <script>
+        (() => {
+            const table = document.querySelector('.report-table');
+            if (!table || !table.tBodies.length) return;
+
+            const body = table.tBodies[0];
+            const buttons = [...table.querySelectorAll('.report-sort-button')];
+            let activeButton = null;
+            let direction = 1;
+
+            const compareValues = (left, right, type) => {
+                if (type === 'number') {
+                    const leftNumber = Number.parseFloat(left);
+                    const rightNumber = Number.parseFloat(right);
+                    return (Number.isNaN(leftNumber) ? 0 : leftNumber) - (Number.isNaN(rightNumber) ? 0 : rightNumber);
+                }
+
+                return left.localeCompare(right, undefined, { numeric: true, sensitivity: 'base' });
+            };
+
+            buttons.forEach(button => {
+                button.addEventListener('click', () => {
+                    direction = activeButton === button ? direction * -1 : 1;
+                    activeButton = button;
+                    const columnIndex = buttons.indexOf(button);
+                    const type = button.dataset.sortType || 'text';
+                    const rows = [...body.rows].map((row, originalIndex) => ({ row, originalIndex }));
+
+                    rows.sort((left, right) => {
+                        const leftCell = left.row.cells[columnIndex];
+                        const rightCell = right.row.cells[columnIndex];
+                        const leftValue = leftCell?.dataset.sortValue ?? leftCell?.textContent?.trim() ?? '';
+                        const rightValue = rightCell?.dataset.sortValue ?? rightCell?.textContent?.trim() ?? '';
+                        return (compareValues(leftValue, rightValue, type) * direction) || (left.originalIndex - right.originalIndex);
+                    });
+
+                    rows.forEach(({ row }) => body.appendChild(row));
+                    buttons.forEach(item => {
+                        item.classList.toggle('active', item === button);
+                        if (item === button) {
+                            const sortDirection = direction === 1 ? 'ascending' : 'descending';
+                            item.dataset.sortDirection = sortDirection;
+                            item.setAttribute('aria-label', `${item.textContent.trim()}, sort ${sortDirection}`);
+                        } else {
+                            delete item.dataset.sortDirection;
+                            item.removeAttribute('aria-label');
+                        }
+                    });
+                });
+            });
+        })();
+    </script>
 }
