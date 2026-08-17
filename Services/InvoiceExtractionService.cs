@@ -10,6 +10,7 @@ namespace EfcomReport.Services;
 
 public sealed record InvoiceExtractionResult(
     string? Customer,
+    string? Provider,
     string? InvoiceNumber,
     string? CurrencySymbol,
     decimal? Amount,
@@ -77,7 +78,7 @@ public sealed class InvoiceExtractionService(
             if (string.IsNullOrWhiteSpace(text))
             {
                 warnings.Add("No readable text was found. Enter the fields manually.");
-                return new InvoiceExtractionResult(null, null, null, null, null, null, source,
+                return new InvoiceExtractionResult(null, null, null, null, null, null, null, source,
                     "The document could not be read automatically. Please enter the fields manually.", warnings);
             }
 
@@ -216,7 +217,7 @@ public sealed class InvoiceExtractionService(
 
     private InvoiceExtractionResult Parse(string text, string source, List<string> warnings)
     {
-        var customer = NormalizeCustomerName(ExtractCustomerValue(text));
+        var provider = NormalizeCustomerName(ExtractCustomerValue(text));
         var invoiceNumber = ExtractInvoiceNumber(text);
         var money = ExtractTotalMoney(text);
         var currency = money.Currency ?? FindCurrency(text);
@@ -224,17 +225,18 @@ public sealed class InvoiceExtractionService(
         var paymentType = (string?)null;
         var comments = ExtractDescription(text);
 
-        if (customer is null) warnings.Add("Customer was not detected.");
+        if (provider is null) warnings.Add("Provider was not detected.");
         if (invoiceNumber is null) warnings.Add("Invoice number was not detected.");
         if (money.Amount is null) warnings.Add("Total amount was not detected.");
         if (comments is null) warnings.Add("Item description was not detected.");
 
         var found = new[] {
-            customer, invoiceNumber, currency, money.Amount?.ToString(CultureInfo.InvariantCulture), paymentType, comments
+            provider, invoiceNumber, currency, money.Amount?.ToString(CultureInfo.InvariantCulture), paymentType, comments
         }.Count(x => !string.IsNullOrWhiteSpace(x));
 
         return new InvoiceExtractionResult(
-            customer,
+            provider,
+            provider,
             invoiceNumber,
             currency,
             money.Amount,
@@ -637,7 +639,7 @@ public sealed class InvoiceExtractionService(
     }
 
     private static int CountFields(InvoiceExtractionResult result) =>
-        new[] { result.Customer, result.InvoiceNumber, result.CurrencySymbol,
+        new[] { result.Provider, result.InvoiceNumber, result.CurrencySymbol,
             result.Amount?.ToString(CultureInfo.InvariantCulture), result.PaymentType, result.Comments }
             .Count(x => !string.IsNullOrWhiteSpace(x));
 

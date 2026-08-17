@@ -22,6 +22,7 @@ else
                 <tr>
                     <th>@T.Get(Context, "Date")</th>
                     <th>@T.Get(Context, "Customer")</th>
+                    <th>@T.Get(Context, "Provider")</th>
                     <th>@T.Get(Context, "Invoice number")</th>
                     <th>@T.Get(Context, "Amount")</th>
                     <th>@T.Get(Context, "Payment type")</th>
@@ -39,6 +40,7 @@ else
                 <tr>
                     <td>@entry.CreatedAtUtc.ToLocalTime().ToString("yyyy-MM-dd HH:mm")</td>
                     <td>@entry.Customer</td>
+                    <td>@entry.Provider</td>
                     <td>@entry.InvoiceNumber</td>
                     <td>@entry.CurrencySymbol@entry.Amount.ToString("0.##")</td>
                     <td>@entry.PaymentType</td>

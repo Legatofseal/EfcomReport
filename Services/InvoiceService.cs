@@ -118,6 +118,7 @@ public sealed class InvoiceService(
         return $"New Accounting Entry\n\n" +
                $"Placeholder: {(entry.IsPlaceholder ? "Yes" : "No")}\n" +
                $"Customer: {entry.Customer}\n" +
+               $"Provider: {entry.Provider}\n" +
                $"Invoice: {entry.InvoiceNumber}\n" +
                $"Amount: {entry.CurrencySymbol}{entry.Amount.ToString("0.00", CultureInfo.InvariantCulture)}\n" +
                $"Payment: {entry.PaymentType}\n" +

@@ -16,17 +16,25 @@ public sealed class CreateModel(
     IConfiguration configuration,
     AppDbContext db) : PageModel
 {
+    public const string AddNewCustomerValue = "__new_customer__";
     public List<InvoiceRecipient> RecipientOptions { get; private set; } = [];
     public List<InvoiceCustomerOption> CustomerOptions { get; private set; } = [];
     public List<PaymentTypeOption> PaymentTypeOptions { get; private set; } = [];
     public bool HasInvoiceRecipients { get; private set; }
     public bool HasPaymentTypeOptions => PaymentTypeOptions.Count > 0;
+    public bool CanAddCustomer => !User.IsInRole("Admin");
 
     [BindProperty, Required, EmailAddress, StringLength(320)]
     public string RecipientEmail { get; set; } = "";
 
     [BindProperty, Required, StringLength(200)]
     public string Customer { get; set; } = "";
+
+    [BindProperty, StringLength(200)]
+    public string? NewCustomer { get; set; }
+
+    [BindProperty, Required, StringLength(200)]
+    public string Provider { get; set; } = "";
 
     [BindProperty, Required, StringLength(100)]
     public string InvoiceNumber { get; set; } = "";
@@ -87,6 +95,8 @@ public sealed class CreateModel(
 
         RecipientEmail = RecipientEmail.Trim();
         Customer = Customer.Trim();
+        NewCustomer = NewCustomer?.Trim();
+        Provider = Provider.Trim();
         InvoiceNumber = InvoiceNumber.Trim();
         CurrencyChoice = CurrencyChoice.Trim();
         OtherCurrencySymbol = OtherCurrencySymbol?.Trim();
@@ -114,10 +124,41 @@ public sealed class CreateModel(
             ModelState.AddModelError(nameof(RecipientEmail), "Configure an invoice recipient before submitting an invoice.");
         }
 
-        if (!CustomerOptions.Any(x => x.IsActive && string.Equals(x.Name, Customer, StringComparison.OrdinalIgnoreCase)))
+        var isNewCustomerRequest = string.Equals(Customer, AddNewCustomerValue, StringComparison.Ordinal);
+        var newCustomerAccepted = false;
+        if (isNewCustomerRequest)
+        {
+            if (!CanAddCustomer)
+            {
+                ModelState.AddModelError(nameof(Customer), "Select an active invoice customer.");
+            }
+            else if (string.IsNullOrWhiteSpace(NewCustomer))
+            {
+                ModelState.AddModelError(nameof(NewCustomer), "Enter a new customer name.");
+            }
+            else
+            {
+                var existingCustomer = await db.InvoiceCustomerOptions
+                    .FirstOrDefaultAsync(x => x.Name.ToLower() == NewCustomer.ToLower());
+                if (existingCustomer is not null)
+                {
+                    existingCustomer.IsActive = true;
+                    Customer = existingCustomer.Name;
+                }
+                else
+                {
+                    Customer = NewCustomer;
+                    db.InvoiceCustomerOptions.Add(new InvoiceCustomerOption { Name = Customer, IsActive = true });
+                }
+                newCustomerAccepted = true;
+            }
+        }
+        else if (!CustomerOptions.Any(x => x.IsActive && string.Equals(x.Name, Customer, StringComparison.OrdinalIgnoreCase)))
+        {
             ModelState.AddModelError(nameof(Customer), CustomerOptions.Count == 0
                 ? "Configure an invoice customer before submitting an invoice."
                 : "Select an active invoice customer.");
+        }
 
         if (!PaymentTypeOptions.Any(x => string.Equals(x.Name, PaymentType, StringComparison.OrdinalIgnoreCase)))
             ModelState.AddModelError(nameof(PaymentType), "Select an active payment type.");
@@ -128,13 +169,14 @@ public sealed class CreateModel(
             if (attachmentError is not null) ModelState.AddModelError(nameof(Attachment), attachmentError);
         }
 
-        if (!ModelState.IsValid) return Page();
+        if (!ModelState.IsValid || (isNewCustomerRequest && !newCustomerAccepted)) return Page();
 
         var entry = new InvoiceEntry
         {
             SubmittedByEmail = user.Email,
             RecipientEmail = RecipientEmail,
             Customer = Customer,
+            Provider = Provider,
             InvoiceNumber = InvoiceNumber,
             CurrencySymbol = CurrencySymbol,
             Amount = Amount,

@@ -137,6 +137,7 @@ public sealed class InvoiceEntry
     public string SubmittedByEmail { get; set; } = "";
     public string RecipientEmail { get; set; } = "";
     public string Customer { get; set; } = "";
+    public string Provider { get; set; } = "";
     public string InvoiceNumber { get; set; } = "";
     public string CurrencySymbol { get; set; } = "";
     public decimal Amount { get; set; }

@@ -28,15 +28,24 @@
     </div>
     <div class="col-md-6">
         <label asp-for="Customer" class="form-label">@T.Get(Context, "Customer")</label>
-        @if (Model.CustomerOptions.Count > 0)
+        @if (Model.CustomerOptions.Count > 0 || Model.CanAddCustomer)
         {
-            <select asp-for="Customer" class="form-select">
+            <select asp-for="Customer" id="Customer" class="form-select">
                 <option value="" disabled>@T.Get(Context, "Select invoice customer")</option>
                 @foreach (var customer in Model.CustomerOptions)
                 {
                     <option value="@customer.Name">@customer.Name</option>
                 }
+                @if (Model.CanAddCustomer)
+                {
+                    <option value="@CreateModel.AddNewCustomerValue">+ @T.Get(Context, "Add new customer")</option>
+                }
             </select>
+            @if (Model.CanAddCustomer)
+            {
+                <input asp-for="NewCustomer" id="NewCustomer" class="form-control mt-2 d-none" placeholder="@T.Get(Context, "New customer name")" disabled />
+                <span asp-validation-for="NewCustomer" class="text-danger"></span>
+            }
         }
         else
         {
@@ -44,6 +53,11 @@
             <div class="form-text text-warning">@T.Get(Context, "No active invoice customers are configured. Ask an administrator to add one.")</div>
         }
         <span asp-validation-for="Customer" class="text-danger"></span>
+    </div>
+    <div class="col-md-6">
+        <label asp-for="Provider" class="form-label">@T.Get(Context, "Provider")</label>
+        <input asp-for="Provider" id="Provider" class="form-control" placeholder="@T.Get(Context, "Actual invoice issuer")" />
+        <span asp-validation-for="Provider" class="text-danger"></span>
     </div>
     <div class="col-md-4">
         <label asp-for="InvoiceNumber" class="form-label">@T.Get(Context, "Invoice number")</label>
@@ -124,6 +138,8 @@
             const currencyChoice = document.getElementById('CurrencyChoice');
             const currencySymbol = document.getElementById('CurrencySymbol');
             const otherCurrencySymbol = document.getElementById('OtherCurrencySymbol');
+            const customer = document.getElementById('Customer');
+            const newCustomer = document.getElementById('NewCustomer');
             const form = button?.closest('form');
             if (!button || !fileInput || !status || !warnings || !form || !currencyChoice || !currencySymbol || !otherCurrencySymbol) return;
 
@@ -143,6 +159,16 @@
             currencyChoice.addEventListener('change', syncCurrency);
             otherCurrencySymbol.addEventListener('input', syncCurrency);
             syncCurrency();
+
+            if (customer && newCustomer) {
+                const syncCustomer = () => {
+                    const isNew = customer.value === '@CreateModel.AddNewCustomerValue';
+                    newCustomer.classList.toggle('d-none', !isNew);
+                    newCustomer.disabled = !isNew;
+                };
+                customer.addEventListener('change', syncCustomer);
+                syncCustomer();
+            }
 
             button.addEventListener('click', async () => {
                 const file = fileInput.files?.[0];
@@ -170,6 +196,7 @@
 
                     const fields = [
                         ['InvoiceNumber', result.invoiceNumber],
+                        ['Provider', result.provider],
                         ['CurrencySymbol', result.currencySymbol],
                         ['Amount', result.amount],
                         ['Comments', result.comments]
