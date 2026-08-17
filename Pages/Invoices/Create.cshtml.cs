@@ -22,7 +22,7 @@ public sealed class CreateModel(
     public List<PaymentTypeOption> PaymentTypeOptions { get; private set; } = [];
     public bool HasInvoiceRecipients { get; private set; }
     public bool HasPaymentTypeOptions => PaymentTypeOptions.Count > 0;
-    public bool CanAddCustomer => !User.IsInRole("Admin");
+    public bool CanAddCustomer => true;
 
     [BindProperty, Required, EmailAddress, StringLength(320)]
     public string RecipientEmail { get; set; } = "";
@@ -128,11 +128,7 @@ public sealed class CreateModel(
         var newCustomerAccepted = false;
         if (isNewCustomerRequest)
         {
-            if (!CanAddCustomer)
-            {
-                ModelState.AddModelError(nameof(Customer), "Select an active invoice customer.");
-            }
-            else if (string.IsNullOrWhiteSpace(NewCustomer))
+            if (string.IsNullOrWhiteSpace(NewCustomer))
             {
                 ModelState.AddModelError(nameof(NewCustomer), "Enter a new customer name.");
             }
