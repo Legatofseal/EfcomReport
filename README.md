@@ -81,7 +81,7 @@ The Docker image installs Poppler and Tesseract with English, Hebrew and Russian
 
 On Azure, long-term application data is stored in the SQLite file `/home/efcomreport.db`. Sick-leave documents are stored outside SQLite under `/home/efcomreport-uploads`, and invoice documents under its `invoices` subdirectory. Both locations use App Service persistent storage when `WEBSITES_ENABLE_APP_SERVICE_STORAGE=true`; the data is not stored in GitHub. This is persistent storage, not a backup, so configure App Service Backup and verify a restore before relying on it for accounting records. Set `FileStorage__RootPath` only if a different persistent path is required.
 
-The reminder worker checks the configured day of month (`Reminder:DayOfMonth`, default `1`). For Azure, a scheduled Azure job is preferable to relying on a background worker in a scaled-out web container.
+The reminder worker checks the configured day of month (`Reminder:DayOfMonth`, default `1`) and reminds employees about the previous completed month. For Azure, a scheduled Azure job is preferable to relying on a background worker in a scaled-out web container.
 
 ## Docker
 

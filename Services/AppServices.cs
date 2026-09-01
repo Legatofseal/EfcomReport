@@ -434,13 +434,14 @@ public sealed class ReminderService(AppDbContext db, EmailService email, IConfig
     public async Task<int> RunAsync(bool force)
     {
         var now = DateTime.Now;
+        var reportPeriod = new DateTime(now.Year, now.Month, 1).AddMonths(-1);
         var dueDay = configuration.GetValue("Reminder:DayOfMonth", 1);
         if (!force && now.Day != dueDay) return 0;
         if (!force && await db.ReminderRuns.AnyAsync(x => x.Year == now.Year && x.Month == now.Month)) return 0;
 
         var employees = await db.Employees.Where(x => x.IsActive).OrderBy(x => x.Name).ToListAsync();
         var submissions = await db.MonthlySubmissions
-            .Where(x => x.Year == now.Year && x.Month == now.Month)
+            .Where(x => x.Year == reportPeriod.Year && x.Month == reportPeriod.Month)
             .ToDictionaryAsync(x => x.EmployeeId);
         var missing = employees.Where(x => !submissions.TryGetValue(x.Id, out var submission) || !submission.IsConfirmed).ToList();
         if (missing.Count == 0)
@@ -450,10 +451,10 @@ public sealed class ReminderService(AppDbContext db, EmailService email, IConfig
         }
         if (!email.IsConfigured) throw new InvalidOperationException("Email is not configured for reminders.");
         foreach (var employee in missing)
-            await SendReminderAsync(employee, now.Year, now.Month);
+            await SendReminderAsync(employee, reportPeriod.Year, reportPeriod.Month);
         db.ReminderRuns.Add(new ReminderRun { Year = now.Year, Month = now.Month });
         await db.SaveChangesAsync();
-        logger.LogInformation("Sent {Count} monthly reminders", missing.Count);
+        logger.LogInformation("Sent {Count} monthly reminders for {Year}-{Month:00}", missing.Count, reportPeriod.Year, reportPeriod.Month);
         return missing.Count;
     }
 
