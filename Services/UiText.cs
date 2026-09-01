@@ -65,6 +65,13 @@ public sealed class UiText
         ["Missing submissions are highlighted and selected by default."] = "\u05D3\u05D9\u05D5\u05D5\u05D7\u05D9\u05DD \u05D7\u05E1\u05E8\u05D9\u05DD \u05DE\u05D5\u05D3\u05D2\u05E9\u05D9\u05DD \u05D5\u05E0\u05D1\u05D7\u05E8\u05D9\u05DD \u05D1\u05E8\u05D9\u05E8\u05EA \u05DE\u05D7\u05D3\u05DC.", ["Request reports from selected employees"] = "\u05D1\u05E7\u05E9 \u05D3\u05D9\u05D5\u05D5\u05D7\u05D9\u05DD \u05DE\u05D4\u05E2\u05D5\u05D1\u05D3\u05D9\u05DD \u05E9\u05E0\u05D1\u05D7\u05E8\u05D5", ["Email selected employees and ask for a monthly submission."] = "\u05E9\u05DC\u05D7 \u05DC\u05E2\u05D5\u05D1\u05D3\u05D9\u05DD \u05E9\u05E0\u05D1\u05D7\u05E8\u05D5 \u05D1\u05E7\u05E9\u05D4 \u05DC\u05D3\u05D9\u05D5\u05D5\u05D7 \u05D7\u05D5\u05D3\u05E9\u05D9.", ["No employees selected."] = "\u05DC\u05D0 \u05E0\u05D1\u05D7\u05E8\u05D5 \u05E2\u05D5\u05D1\u05D3\u05D9\u05DD"
     };
 
+    private static readonly IReadOnlyDictionary<string, string> ReportsHebrew = new Dictionary<string, string>(StringComparer.Ordinal)
+    {
+        ["Remind all not confirmed"] = "\u05D4\u05D6\u05DB\u05E8 \u05DC\u05DB\u05DC \u05DE\u05D9 \u05E9\u05DC\u05D0 \u05D0\u05D9\u05E9\u05E8",
+        ["Remind all not confirmed?"] = "\u05DC\u05E9\u05DC\u05D5\u05D7 \u05D4\u05D6\u05DB\u05E8\u05D4 \u05DC\u05DB\u05DC \u05DE\u05D9 \u05E9\u05DC\u05D0 \u05D0\u05D9\u05E9\u05E8?",
+        ["Send a reminder to every selected employee who has not confirmed this month."] = "\u05E9\u05DC\u05D7 \u05D4\u05D6\u05DB\u05E8\u05D4 \u05DC\u05DB\u05DC \u05E2\u05D5\u05D1\u05D3 \u05E9\u05E0\u05D1\u05D7\u05E8 \u05E9\u05DC\u05D0 \u05D0\u05D9\u05E9\u05E8 \u05D0\u05EA \u05D4\u05D7\u05D5\u05D3\u05E9 \u05D4\u05D6\u05D4."
+    };
+
     private static readonly IReadOnlyDictionary<string, string> Russian = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["Tracker"] = "Трекер", ["Invoices"] = "Инвойсы", ["Invoice entries"] = "Записи инвойсов", ["New invoice entry"] = "Новая запись инвойса", ["Invoice recipients"] = "Получатели инвойсов",
@@ -137,6 +144,9 @@ public sealed class UiText
         ["Missing submissions are highlighted and selected by default."] = "Отсутствующие отчёты выделены и выбраны по умолчанию.",
         ["Request reports from selected employees"] = "Запросить отчёты у выбранных сотрудников",
         ["Email selected employees and ask for a monthly submission."] = "Отправить выбранным сотрудникам письмо с просьбой предоставить месячный отчёт.",
+        ["Remind all not confirmed"] = "Напомнить всем, кто не подтвердил",
+        ["Remind all not confirmed?"] = "Отправить напоминание всем, кто не подтвердил отчёт?",
+        ["Send a reminder to every selected employee who has not confirmed this month."] = "Отправить напоминание каждому выбранному сотруднику, который ещё не подтвердил этот месяц.",
         ["No employees selected."] = "Сотрудники не выбраны.",
         ["Monthly reminders"] = "Ежемесячные напоминания",
         ["The background worker checks the configured day of month. Use this button to test the reminder run locally."] = "Фоновая служба проверяет заданный день месяца. Используйте эту кнопку для локальной проверки напоминаний.",
@@ -210,7 +220,7 @@ public sealed class UiText
         if (language != "he") return value;
         if (InventoryHebrew.TryGetValue(value, out var inventoryHebrew)) return DecodeTranslation(inventoryHebrew);
         if (InventoryNewHebrew.TryGetValue(value, out inventoryHebrew)) return DecodeTranslation(inventoryHebrew);
-        if (!Hebrew.TryGetValue(value, out var translation) && !AdditionalHebrew.TryGetValue(value, out translation) && !NewHebrew.TryGetValue(value, out translation))
+        if (!Hebrew.TryGetValue(value, out var translation) && !AdditionalHebrew.TryGetValue(value, out translation) && !NewHebrew.TryGetValue(value, out translation) && !ReportsHebrew.TryGetValue(value, out translation))
             return value;
         return DecodeTranslation(translation);
     }

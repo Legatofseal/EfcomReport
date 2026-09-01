@@ -78,6 +78,56 @@ public class ReportsModel(AppDbContext db, ReportService reports, EmailService e
         return Redirect(BuildReportUrl(start, end, employeeIds ?? [], ""));
     }
 
+    public async Task<IActionResult> OnPostRemindAllAsync(
+        int year,
+        int month,
+        int startYear,
+        int startMonth,
+        int endYear,
+        int endMonth,
+        List<int>? employeeIds)
+    {
+        await LoadAsync();
+        if (!TryGetPeriod(startYear, startMonth, endYear, endMonth, out var start, out var end))
+        {
+            TempData["Message"] = "Select a valid report period.";
+            return RedirectToPage();
+        }
+
+        if (start.Year != end.Year || start.Month != end.Month || year != start.Year || month != start.Month)
+        {
+            TempData["Message"] = "Select one month to send reminders to all not confirmed employees.";
+            return Redirect(BuildReportUrl(start, end, employeeIds ?? [], ""));
+        }
+
+        var selectedEmployeeIds = NormalizeEmployeeSelection(employeeIds);
+        var confirmedEmployeeIds = await db.MonthlySubmissions
+            .Where(x => x.Year == year && x.Month == month && x.IsConfirmed && selectedEmployeeIds.Contains(x.EmployeeId))
+            .Select(x => x.EmployeeId)
+            .ToListAsync();
+        var confirmed = confirmedEmployeeIds.ToHashSet();
+        var missingEmployeeIds = selectedEmployeeIds.Where(x => !confirmed.Contains(x)).ToList();
+        var sent = 0;
+        var failed = 0;
+
+        foreach (var employeeId in missingEmployeeIds)
+        {
+            try
+            {
+                if (await reminders.SendIndividualAsync(employeeId, year, month)) sent++;
+            }
+            catch
+            {
+                failed++;
+            }
+        }
+
+        TempData["Message"] = failed == 0
+            ? $"Reminders sent to {sent} employee(s)."
+            : $"Reminders sent to {sent} employee(s); {failed} failed.";
+        return Redirect(BuildReportUrl(start, end, selectedEmployeeIds, ""));
+    }
+
     public async Task<IActionResult> OnPostSendAsync(int startYear, int startMonth, int endYear, int endMonth, List<int>? employeeIds)
     {
         await LoadAsync();
