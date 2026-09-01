@@ -38,9 +38,9 @@ public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCa
         if (IsHalfDay && StartDate != EndDate) ModelState.AddModelError(nameof(IsHalfDay), "Half-day absence must use the same start and end date.");
         var leaveType = await db.LeaveTypes.SingleOrDefaultAsync(x => x.Id == LeaveTypeId && x.IsActive);
         if (leaveType is null) ModelState.AddModelError(nameof(LeaveTypeId), "Select an active leave type.");
-        var isSickLeave = string.Equals(leaveType?.Name, "Sick Leave", StringComparison.OrdinalIgnoreCase);
-        if (Attachment is not null && !isSickLeave) ModelState.AddModelError(nameof(Attachment), "A document can only be attached to Sick Leave.");
-        if (Attachment is not null && isSickLeave)
+        var allowsAttachment = IsAttachmentAllowed(leaveType);
+        if (Attachment is not null && !allowsAttachment) ModelState.AddModelError(nameof(Attachment), "A document can only be attached to Sick Leave or Miluim.");
+        if (Attachment is not null && allowsAttachment)
         {
             var attachmentError = attachments.Validate(Attachment);
             if (attachmentError is not null) ModelState.AddModelError(nameof(Attachment), attachmentError);
@@ -74,4 +74,8 @@ public class CreateModel(AppDbContext db, CurrentUserService currentUser, WorkCa
         TempData["Message"] = $"Absence saved. Counted workdays: {countedWorkdays:0.##}.";
         return RedirectToPage("/Index", new { month = StartDate.Month, year = StartDate.Year });
     }
+
+    private static bool IsAttachmentAllowed(LeaveType? leaveType) =>
+        string.Equals(leaveType?.Name, "Sick Leave", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(leaveType?.Name, "Miluim", StringComparison.OrdinalIgnoreCase);
 }

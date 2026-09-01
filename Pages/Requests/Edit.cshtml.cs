@@ -35,9 +35,9 @@ public class EditModel(AppDbContext db, CurrentUserService currentUser, Submissi
         if (IsHalfDay && StartDate != EndDate) ModelState.AddModelError(nameof(IsHalfDay), "Half-day absence must use the same start and end date.");
         var leaveType = await db.LeaveTypes.SingleOrDefaultAsync(x => x.Id == LeaveTypeId && x.IsActive);
         if (leaveType is null) ModelState.AddModelError(nameof(LeaveTypeId), "Select an active leave type.");
-        var isSickLeave = string.Equals(leaveType?.Name, "Sick Leave", StringComparison.OrdinalIgnoreCase);
-        if (Attachment is not null && !isSickLeave) ModelState.AddModelError(nameof(Attachment), "A document can only be attached to Sick Leave.");
-        if (Attachment is not null && isSickLeave)
+        var allowsAttachment = IsAttachmentAllowed(leaveType);
+        if (Attachment is not null && !allowsAttachment) ModelState.AddModelError(nameof(Attachment), "A document can only be attached to Sick Leave or Miluim.");
+        if (Attachment is not null && allowsAttachment)
         {
             var attachmentError = attachments.Validate(Attachment);
             if (attachmentError is not null) ModelState.AddModelError(nameof(Attachment), attachmentError);
@@ -58,14 +58,14 @@ public class EditModel(AppDbContext db, CurrentUserService currentUser, Submissi
                 RequestItem.AttachmentUploadedByEmail = user.Email;
                 RequestItem.AttachmentUploadedAtUtc = DateTime.UtcNow;
             }
-            else if (!isSickLeave || RemoveAttachment)
+            else if (!allowsAttachment || RemoveAttachment)
             {
                 RequestItem.AttachmentOriginalName = null; RequestItem.AttachmentStorageName = null;
                 RequestItem.AttachmentContentType = null; RequestItem.AttachmentSize = null;
                 RequestItem.AttachmentUploadedByName = null; RequestItem.AttachmentUploadedByEmail = null; RequestItem.AttachmentUploadedAtUtc = null;
             }
             await db.SaveChangesAsync();
-            if (oldStorageName is not null && (replacement is not null || !isSickLeave || RemoveAttachment)) attachments.Delete(oldStorageName);
+            if (oldStorageName is not null && (replacement is not null || !allowsAttachment || RemoveAttachment)) attachments.Delete(oldStorageName);
         }
         catch
         {
@@ -96,4 +96,8 @@ public class EditModel(AppDbContext db, CurrentUserService currentUser, Submissi
         LeaveTypes = await db.LeaveTypes.Where(x => x.IsActive).OrderBy(x => x.Id).ToListAsync();
         LeaveTypeId = RequestItem.LeaveTypeId; StartDate = RequestItem.StartDate; EndDate = RequestItem.EndDate; IsHalfDay = RequestItem.IsHalfDay; Notes = RequestItem.Notes; return true;
     }
+
+    private static bool IsAttachmentAllowed(LeaveType? leaveType) =>
+        string.Equals(leaveType?.Name, "Sick Leave", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(leaveType?.Name, "Miluim", StringComparison.OrdinalIgnoreCase);
 }
