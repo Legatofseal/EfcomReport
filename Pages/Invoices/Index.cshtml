@@ -10,6 +10,49 @@
     <a class="btn btn-primary" asp-page="/Invoices/Create">@T.Get(Context, "New invoice entry")</a>
 </div>
 
+@if (Model.MonthlySummaries.Count > 0)
+{
+    <section class="card mb-4">
+        <div class="card-body">
+            <h2 class="h5">@T.Get(Context, "Monthly totals")</h2>
+            <p class="text-muted small">@T.Get(Context, "Placeholder entries are not included in totals.")</p>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>@T.Get(Context, "Month")</th>
+                            <th>@T.Get(Context, "Totals")</th>
+                            <th>@T.Get(Context, "Placeholders")</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    @foreach (var summary in Model.MonthlySummaries)
+                    {
+                        <tr>
+                            <td>@T.MonthName(Context, summary.Month) @summary.Year</td>
+                            <td>
+                                @if (summary.Totals.Count == 0)
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                                else
+                                {
+                                    @foreach (var total in summary.Totals)
+                                    {
+                                        <span class="me-3">@total.CurrencySymbol@total.Amount.ToString("0.##") <span class="text-muted small">(@total.Count)</span></span>
+                                    }
+                                }
+                            </td>
+                            <td>@(summary.PlaceholderCount == 0 ? "—" : summary.PlaceholderCount.ToString())</td>
+                        </tr>
+                    }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+}
+
 @if (Model.Entries.Count == 0)
 {
     <p class="text-muted">@T.Get(Context, "No invoice entries yet.")</p>
