@@ -18,8 +18,11 @@ public class IndexModel(AppDbContext db, CurrentUserService currentUser, Submiss
     public Dictionary<int, decimal> RequestDays { get; private set; } = [];
     public string SubmissionState { get; private set; } = "Not confirmed";
     public DateTime? ConfirmedAtUtc { get; private set; }
-    public int CurrentMonth => Month ?? DateTime.Today.Month;
-    public int CurrentYear => Year ?? DateTime.Today.Year;
+    public int CurrentMonth => Month ?? DefaultReportPeriod.Month;
+    public int CurrentYear => Year ?? DefaultReportPeriod.Year;
+    public bool IsCurrentPeriodBeforeConfirmationDate =>
+        SelectedPeriod == CurrentPeriod && DateTime.Today.Day < 25;
+    public bool CanConfirm => SelectedPeriod <= CurrentPeriod && !IsCurrentPeriodBeforeConfirmationDate;
 
     public async Task OnGetAsync()
     {
@@ -50,8 +53,22 @@ public class IndexModel(AppDbContext db, CurrentUserService currentUser, Submiss
         var user = await currentUser.GetAsync(User);
         if (user?.EmployeeId is not int employeeId) return Forbid();
         if (year is < 2020 or > 2100 || month is < 1 or > 12) return BadRequest();
+        var selectedPeriod = new DateTime(year, month, 1);
+        if (selectedPeriod > CurrentPeriod) return BadRequest("Future reports cannot be confirmed.");
+        if (selectedPeriod == CurrentPeriod && DateTime.Today.Day < 25)
+        {
+            TempData["Message"] = "The current month can be confirmed from the 25th.";
+            return RedirectToPage(new { month, year });
+        }
         await submissions.ConfirmAsync(employeeId, year, month);
         TempData["Message"] = "Monthly report confirmed.";
         return RedirectToPage(new { month, year });
     }
+
+    private static DateTime CurrentPeriod => new(DateTime.Today.Year, DateTime.Today.Month, 1);
+
+    private static DateTime DefaultReportPeriod =>
+        CurrentPeriod.AddMonths(DateTime.Today.Day < 25 ? -1 : 0);
+
+    private DateTime SelectedPeriod => new(CurrentYear, CurrentMonth, 1);
 }

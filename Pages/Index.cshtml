@@ -27,10 +27,14 @@ else
             }
         </div>
         <div class="d-flex gap-2">
-            <form method="post" asp-page-handler="Confirm"><input type="hidden" name="year" value="@Model.CurrentYear" /><input type="hidden" name="month" value="@Model.CurrentMonth" /><button class="btn btn-outline-success" type="submit">@T.Get(Context, "Confirm monthly report")</button></form>
+            <form method="post" asp-page-handler="Confirm"><input type="hidden" name="year" value="@Model.CurrentYear" /><input type="hidden" name="month" value="@Model.CurrentMonth" /><button class="btn btn-outline-success" type="submit" disabled="@(Model.CanConfirm ? null : "disabled")">@T.Get(Context, "Confirm monthly report")</button></form>
             <a class="btn btn-primary" asp-page="/Requests/Create" asp-route-year="@Model.CurrentYear" asp-route-month="@Model.CurrentMonth">@T.Get(Context, "Add absence")</a>
         </div>
     </div></div>
+    @if (Model.IsCurrentPeriodBeforeConfirmationDate)
+    {
+        <p class="text-muted small">@T.Get(Context, "The current month can be confirmed from the 25th.")</p>
+    }
 
     <h2 class="h4">@T.Get(Context, "My absences")</h2>
     @if (Model.Requests.Count == 0) { <p class="text-muted">@T.Get(Context, "No absence records for this month.")</p> }
