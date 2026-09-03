@@ -311,7 +311,7 @@ public class ReportsModel(AppDbContext db, ReportService reports, EmailService e
     private static string ToCsv(ReportView report)
     {
         var columns = new List<string> { "Report Period", "Employee" };
-        foreach (var type in report.Types) { columns.Add($"{type.Name} Days"); columns.Add($"{type.Name} Entries"); }
+        foreach (var type in report.Types) { columns.Add($"{type.Name} Days"); columns.Add($"{type.Name} Info"); }
         columns.Add("Total Leave Days"); columns.Add("Submission Status");
         var sb = new StringBuilder();
         sb.AppendLine(string.Join(',', columns.Select(Escape)));
@@ -321,7 +321,7 @@ public class ReportsModel(AppDbContext db, ReportService reports, EmailService e
             foreach (var type in report.Types)
             {
                 values.Add(row.DaysByType.GetValueOrDefault(type.Name).ToString("0.##", CultureInfo.InvariantCulture));
-                values.Add(row.EntryCounts.GetValueOrDefault(type.Name).ToString());
+                values.Add(row.AbsenceInfo(type.Name));
             }
             values.Add(row.TotalDays.ToString("0.##", CultureInfo.InvariantCulture));
             values.Add(row.SubmissionState);

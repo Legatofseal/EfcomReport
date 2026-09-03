@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text;
+using System.Globalization;
 using EfcomReport.Data;
 using EfcomReport.Models;
 using Microsoft.EntityFrameworkCore;
@@ -316,9 +317,14 @@ public sealed class ReportService(AppDbContext db, WorkCalendarService calendar)
         foreach (var request in requests)
         {
             if (!rows.TryGetValue(request.EmployeeId, out var row)) continue;
-            row.EntryCounts[request.LeaveType.Name] = row.EntryCounts.GetValueOrDefault(request.LeaveType.Name) + 1;
             var start = request.StartDate.Date < rangeStart ? rangeStart : request.StartDate.Date;
             var end = request.EndDate.Date > rangeEnd ? rangeEnd : request.EndDate.Date;
+            if (!row.AbsenceDetailsByType.TryGetValue(request.LeaveType.Name, out var details))
+            {
+                details = [];
+                row.AbsenceDetailsByType[request.LeaveType.Name] = details;
+            }
+            details.Add(new ReportAbsenceDetail(start, end, request.IsHalfDay));
             var typeDays = row.DayFractionsByType.GetValueOrDefault(request.LeaveType.Name);
             if (typeDays is null)
             {
@@ -363,6 +369,8 @@ public sealed record ReportPeriod(int Year, int Month);
 
 public sealed record ReportSubmissionStatus(int Year, int Month, string State, DateTime? ConfirmedAtUtc);
 
+public sealed record ReportAbsenceDetail(DateTime StartDate, DateTime EndDate, bool IsHalfDay);
+
 public sealed class ReportView(int startYear, int startMonth, int endYear, int endMonth, IReadOnlyList<ReportPeriod> periods, IReadOnlyList<LeaveType> types, IReadOnlyList<ReportRow> rows)
 {
     public int StartYear { get; } = startYear;
@@ -385,12 +393,28 @@ public sealed class ReportRow(int employeeId, string employeeName)
     public int EmployeeId { get; } = employeeId;
     public string EmployeeName { get; } = employeeName;
     public Dictionary<string, decimal> DaysByType { get; } = new(StringComparer.OrdinalIgnoreCase);
-    public Dictionary<string, int> EntryCounts { get; } = new(StringComparer.OrdinalIgnoreCase);
+    public Dictionary<string, List<ReportAbsenceDetail>> AbsenceDetailsByType { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<string, Dictionary<DateTime, decimal>> DayFractionsByType { get; } = new(StringComparer.OrdinalIgnoreCase);
     public Dictionary<DateTime, decimal> DayFractions { get; } = [];
     public decimal TotalDays { get; set; }
     public List<ReportSubmissionStatus> SubmissionStatuses { get; } = [];
     public string SubmissionState => string.Join("; ", SubmissionStatuses.Select(x => $"{x.Year}-{x.Month:00}: {x.State}"));
+
+    public string AbsenceInfo(string leaveTypeName, string halfDayLabel = "half day") =>
+        AbsenceDetailsByType.TryGetValue(leaveTypeName, out var details)
+            ? string.Join("; ", details
+                .OrderBy(x => x.StartDate)
+                .ThenBy(x => x.EndDate)
+                .Select(x => FormatAbsenceDetail(x, halfDayLabel)))
+            : string.Empty;
+
+    private static string FormatAbsenceDetail(ReportAbsenceDetail detail, string halfDayLabel)
+    {
+        var dates = detail.StartDate.Date == detail.EndDate.Date
+            ? detail.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)
+            : $"{detail.StartDate:yyyy-MM-dd} - {detail.EndDate:yyyy-MM-dd}";
+        return detail.IsHalfDay ? $"{dates} ({halfDayLabel})" : dates;
+    }
 }
 
 public sealed class EmailService(IConfiguration configuration, ILogger<EmailService> logger)

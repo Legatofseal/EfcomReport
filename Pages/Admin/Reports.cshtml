@@ -180,7 +180,7 @@
                     @foreach (var type in Model.Report.Types)
                     {
                         <th scope="col"><button type="button" class="report-sort-button" data-sort-type="number">@type.Name @T.Get(Context, "Days")</button></th>
-                        <th scope="col"><button type="button" class="report-sort-button" data-sort-type="number">@type.Name @T.Get(Context, "Entries")</button></th>
+                        <th scope="col"><button type="button" class="report-sort-button" data-sort-type="text">@type.Name @T.Get(Context, "Info")</button></th>
                     }
                     <th scope="col"><button type="button" class="report-sort-button" data-sort-type="number">@T.Get(Context, "Total leave days")</button></th>
                     <th scope="col"><button type="button" class="report-sort-button" data-sort-type="text">@T.Get(Context, "Submission status")</button></th>
@@ -195,9 +195,9 @@
                         @foreach (var type in Model.Report.Types)
                         {
                             var days = row.DaysByType.GetValueOrDefault(type.Name);
-                            var entries = row.EntryCounts.GetValueOrDefault(type.Name);
+                            var info = row.AbsenceInfo(type.Name, T.Get(Context, "Half day"));
                             <td data-sort-value="@days.ToString(CultureInfo.InvariantCulture)">@days.ToString("0.##")</td>
-                            <td data-sort-value="@entries">@entries</td>
+                            <td data-sort-value="@info">@info</td>
                         }
                         <td data-sort-value="@row.TotalDays.ToString(CultureInfo.InvariantCulture)">@row.TotalDays.ToString("0.##")</td>
                         <td data-sort-value="@(hasMissingSubmission ? "Not confirmed" : "Confirmed")">

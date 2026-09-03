@@ -67,6 +67,8 @@ public sealed class UiText
 
     private static readonly IReadOnlyDictionary<string, string> ReportsHebrew = new Dictionary<string, string>(StringComparer.Ordinal)
     {
+        ["Info"] = "\u05DE\u05D9\u05D3\u05E2",
+        ["Half day"] = "\u05D7\u05E6\u05D9 \u05D9\u05D5\u05DD",
         ["Remind all not confirmed"] = "\u05D4\u05D6\u05DB\u05E8 \u05DC\u05DB\u05DC \u05DE\u05D9 \u05E9\u05DC\u05D0 \u05D0\u05D9\u05E9\u05E8",
         ["Remind all not confirmed?"] = "\u05DC\u05E9\u05DC\u05D5\u05D7 \u05D4\u05D6\u05DB\u05E8\u05D4 \u05DC\u05DB\u05DC \u05DE\u05D9 \u05E9\u05DC\u05D0 \u05D0\u05D9\u05E9\u05E8?",
         ["Send a reminder to every selected employee who has not confirmed this month."] = "\u05E9\u05DC\u05D7 \u05D4\u05D6\u05DB\u05E8\u05D4 \u05DC\u05DB\u05DC \u05E2\u05D5\u05D1\u05D3 \u05E9\u05E0\u05D1\u05D7\u05E8 \u05E9\u05DC\u05D0 \u05D0\u05D9\u05E9\u05E8 \u05D0\u05EA \u05D4\u05D7\u05D5\u05D3\u05E9 \u05D4\u05D6\u05D4."
@@ -139,6 +141,7 @@ public sealed class UiText
         ["Apply filters"] = "Применить фильтры",
         ["By default, all active employees are included."] = "По умолчанию включены все активные сотрудники.",
         ["Report period"] = "Период отчёта",
+        ["Info"] = "Информация",
         ["Request reports from employees"] = "Запросить отчёты у сотрудников",
         ["Select a month to see who has not submitted. Missing submissions are selected by default."] = "Выберите месяц, чтобы увидеть, кто не отправил отчёт. Отсутствующие отчёты выбраны по умолчанию.",
         ["Missing submissions are highlighted and selected by default."] = "Отсутствующие отчёты выделены и выбраны по умолчанию.",
