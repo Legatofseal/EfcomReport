@@ -169,6 +169,16 @@ public static class PortalDatabaseInitializer
             }
         }
 
+        if (!db.PaymentTypeOptions.Any(x => x.Name.ToLower() == "cash"))
+        {
+            db.PaymentTypeOptions.Add(new PaymentTypeOption
+            {
+                Name = "CASH",
+                IsActive = true
+            });
+            db.SaveChanges();
+        }
+
         EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentOriginalName", "TEXT NULL");
         EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentStorageName", "TEXT NULL");
         EnsureSqliteColumn(db, "AbsenceRequests", "AttachmentContentType", "TEXT NULL");
